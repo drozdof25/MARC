@@ -72,7 +72,7 @@ class GUI(Tk):
 
         btn3 = Button(self,text = 'Сохранить геометрию',command = lambda :self.save_geometry_2d())
         btn3.grid(column=3, row=3)
-        btn4 = Button(self, text='Сохранить геометрию', command=lambda:self.save_geometry_3d(self.check_state2.get(),self.combo2.get()))
+        btn4 = Button(self, text='Сохранить геометрию', command=lambda:self.save_geometry_3d(self.check_state2.get(),int(self.combo2.get())))
         btn4.grid(column=3, row=4)
 
     def open_file(self,problem):
@@ -174,10 +174,12 @@ class GUI(Tk):
             edges_tuple.append(edge_tuple)
         edges = edges_tuple
         repeat =Counter(edges)
+        #
         self.border_edges = []
         for edge in edges:
             if repeat[edge]==1:
                 self.border_edges.append(edge)
+        ####
         border_edges_xy = []
         for edge in self.border_edges:
             edge_xy = []
@@ -190,20 +192,49 @@ class GUI(Tk):
                 edge_xy.append(nodes[node_id-1]['pos'][0]+ float(dx))
                 edge_xy.append(nodes[node_id - 1]['pos'][1]+ float(dy))
                 edge_xy.append(nodes[node_id - 1]['pos'][2]+float(dz))
-
             border_edges_xy.append(edge_xy)
+        #####
         return border_edges_xy
     def save_geometry_3d(self,check,inc):
         self.get_border(1)
-        border = []
+        border_edges = []
         for edge in self.border_edges:
             edg = []
             for node in edge:
                 nod = node*self.total_rep*2 - self.total_rep + node + len(self.nodes)
                 edg.append(nod)
-            border.append(edg)
+            border_edges.append(edg)
         print(self.border_edges)
-        print(border)
+        print(border_edges)
+        p = post_open(self.post_file3d)
+        p.moveto(inc+1)
+        border_edges_xy = []
+        nodes = []
+        for i in range(0, p.nodes()):
+            nodes.append(p.node(i).id)
+        for edge in border_edges:
+            edge_xy = []
+            for node_id in edge:
+                have_disp = p.node_displacements()
+                if have_disp:
+                    dx, dy, dz = p.node_displacement(nodes.index(node_id))
+                else:
+                    dx, dy, dz = 0, 0, 0
+                edge_xy.append(p.node(nodes.index(node_id)).x  + float(dx))
+                edge_xy.append(p.node(nodes.index(node_id)).y  + float(dy))
+                edge_xy.append(p.node(nodes.index(node_id)).z  + float(dz))
+            border_edges_xy.append(edge_xy)
+        border = border_edges_xy
+        border_string = str()
+        for line in border:
+            border_string += str(line) + '\n'
+        border_string = re.sub('[[]', '', border_string)
+        border_string = re.sub('[]]', '', border_string)
+        file_name = asksaveasfilename(filetypes=(("TXT files", "*.txt"), ("all files", "*.*")))
+        f = open(file_name, 'w')
+        f.write(border_string)
+        f.close()
+
 if __name__ =='__main__':
     #py_connect('',40007)
     GUI().run()
