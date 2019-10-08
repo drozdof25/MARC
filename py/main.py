@@ -7,6 +7,8 @@ from tkinter import*
 from tkinter.filedialog import *
 from tkinter.ttk import Combobox
 from collections import OrderedDict,Counter
+import xlwt
+import numpy as np
 
 
 class GUI(Tk):
@@ -15,12 +17,15 @@ class GUI(Tk):
         self.title('v0')
         self.mainloop()
     def build_main_widgets(self):
-        btn = Button(self,text = 'Обзор',command = lambda :self.open_file('2d'),width =10)
-        btn2 = Button(self,text = 'Обзор',command = lambda :self.open_file('3d'),width =10)
-        lbl = Label(self, text = 'Файл решения 2D:')
-        lbl2 = Label(self, text='Файл решения 3D:')
-        self.lbl3 = Label(self)
-        self.lbl4 = Label(self)
+        frame1 = Frame(self)
+        frame1.pack()
+        btn = Button(frame1,text = 'Обзор',command = lambda :self.open_file('2d'),width =10)
+        btn2 = Button(frame1,text = 'Обзор',command = lambda :self.open_file('3d'),width =10)
+        lbl = Label(frame1, text = 'Файл решения 2D:')
+        lbl2 = Label(frame1, text='Файл решения 3D:')
+        self.lbl3 = Label(frame1)
+        self.lbl4 = Label(frame1)
+
         btn.grid(column=0,row =0)
         btn2.grid(column=0, row=1)
         lbl.grid(column=1, row=0)
@@ -28,9 +33,8 @@ class GUI(Tk):
         self.lbl3.grid(column=2, row=0,columnspan = 10)
         self.lbl4.grid(column=2, row=1,columnspan = 10)
 
-        lbl9 = Label(self, text='Геометрия',height =2)
-        lbl9.grid(column = 1,row = 2)
-
+        frame2 = LabelFrame(self,text = 'Геометрия')
+        frame2.pack()
 
 
 
@@ -38,17 +42,17 @@ class GUI(Tk):
         self.check_state2 = BooleanVar()
         self.check_state3 = BooleanVar()
         self.check_state4 = BooleanVar()
-        chk1 = Checkbutton(self,text = '2D',variable =self.check_state1)
-        chk2 = Checkbutton(self, text='3D', variable=self.check_state2)
+        chk1 = Checkbutton(frame2,text = '2D',variable =self.check_state1)
+        chk2 = Checkbutton(frame2, text='3D', variable=self.check_state2)
 
         chk1.grid(column = 0,row =3)
         chk2.grid(column=0, row=4)
 
 
-        lbl5 = Label(self,text = 'инкремент')
-        self.combo1 = Combobox(self)
-        lbl6 = Label(self, text='инкремент')
-        self.combo2 = Combobox(self)
+        lbl5 = Label(frame2,text = 'инкремент')
+        self.combo1 = Combobox(frame2)
+        lbl6 = Label(frame2, text='инкремент')
+        self.combo2 = Combobox(frame2)
 
 
         lbl5.grid(column = 1,row =3)
@@ -57,10 +61,51 @@ class GUI(Tk):
         self.combo2.grid(column=2, row=4)
 
 
-        btn3 = Button(self,text = 'Сохранить геометрию',command = lambda :self.save_geometry_2d())
+        btn3 = Button(frame2,text = 'Сохранить геометрию',command = lambda :self.save_geometry_2d())
         btn3.grid(column=3, row=3)
-        btn4 = Button(self, text='Сохранить геометрию', command=lambda:self.save_geometry_3d(self.check_state2.get(),int(self.combo2.get())))
+        btn4 = Button(frame2, text='Сохранить геометрию', command=lambda:self.save_geometry_3d(self.check_state2.get(),int(self.combo2.get())))
         btn4.grid(column=3, row=4)
+
+        self.frame3 = LabelFrame(self, text='Энергия и работа')
+        self.frame3.pack()
+
+        e_lbl1 = Label(self.frame3,text = 'Инкремент')
+        e_lbl1.grid(column = 0 ,row =0)
+        self.e_combo1 = Combobox(self.frame3)
+        self.e_combo1.grid(column=0, row=1)
+        self.e_combo2 = Combobox(self.frame3)
+        self.e_combo2.grid(column=0, row=2)
+        self.e_combo3 = Combobox(self.frame3)
+        self.e_combo3.grid(column=0, row=3)
+        e_lbl2 = Label(self.frame3, text='Полная энергия \n деформации, Дж')
+        e_lbl2.grid(column=1, row=0)
+
+        e_lbl3 = Label(self.frame3, text='Полная работа, Дж')
+        e_lbl3.grid(column=2, row=0)
+
+        e_lbl4 = Label(self.frame3, text='Полная энергия упругой \n деформации, Дж')
+        e_lbl4.grid(column=3, row=0)
+
+        e_lbl5 = Label(self.frame3, text='Полная работа приложеных \n сил/перемещений, Дж')
+        e_lbl5.grid(column=4, row=0)
+
+        e_lbl6 = Label(self.frame3, text='Полная работа контактных \n сил, Дж')
+        e_lbl6.grid(column=5, row=0)
+
+        e_lbl7 = Label(self.frame3, text='Полная работа сил трения \n в контакте, Дж')
+        e_lbl7.grid(column=6, row=0)
+
+        e_lbl8 = Label(self.frame3, text='Объём, мм^3')
+        e_lbl8.grid(column=7, row=0)
+
+        e_lbl9 = Label(self.frame3, text='Масса, кг')
+        e_lbl9.grid(column=8, row=0)
+
+
+        e_btn = Button(self.frame3,text = 'обновить',command = lambda :self.refresh_energy())
+        e_btn.grid(column=7, row=4)
+        e_btn2 = Button(self.frame3, text='сохранить',command = lambda : self.save_energy())
+        e_btn2.grid(column=8, row=4)
 
     def open_file(self,problem):
         op = askopenfilename(filetypes = (("Binary Post File","*.t16"),("all files","*.*")))
@@ -94,10 +139,14 @@ class GUI(Tk):
             p = post_open(self.post_file3d)
             for i in range(0, p.increments() - 1):
                 incs.append(i)
-                self.combo2['values'] = incs
-                self.combo2.current(min(incs))
-                p.moveto(0)
-                self.elements_3d = p.elements()
+            self.combo2['values'] = incs
+            self.combo2.current(min(incs))
+            self.e_combo1['values'] = incs
+            self.e_combo2['values'] = incs
+            self.e_combo3['values'] = incs
+
+            p.moveto(0)
+            self.elements_3d = p.elements()
 
     def save_geometry_2d(self):
         inc = int(self.combo1.get())
@@ -184,7 +233,78 @@ class GUI(Tk):
         f = open(file_name, 'w')
         f.write(border_string)
         f.close()
+    def refresh_energy(self):
+        inc_combos = [self.e_combo1,self.e_combo2,self.e_combo3]
+        self.energy = []
+        for inc_combo in inc_combos:
+            try:
+                inc = int(inc_combo.get())
+            except:
+                continue
+            else:
 
+                p = post_open(self.post_file3d)
+                p.moveto(inc + 1)
+
+                grid_info = inc_combo.grid_info()
+                strainenergy = Label(self.frame3,text = str(p.strainenergy/1000))
+                work = Label(self.frame3,text=str(p.work / 1000))
+                elasticenergy = Label(self.frame3,text=str(p.elasticenergy / 1000))
+                appliedwork = Label(self.frame3,text=str(p.appliedwork / 1000))
+                contactwork = Label(self.frame3,text=str(p.contactwork / 1000))
+                frictionwork = Label(self.frame3,text=str(p.frictionwork/ 1000))
+                volume = Label(self.frame3,text=str(p.volume))
+                mass = Label(self.frame3,text=str(p.mass *1000))
+                self.energy.append([p.strainenergy/1000,p.work / 1000,p.elasticenergy / 1000,p.appliedwork / 1000,
+                               p.contactwork / 1000,p.frictionwork/ 1000,p.volume,p.mass *1000])
+                strainenergy.grid(column = 1, row = grid_info['row'])
+                work.grid(column=2, row=grid_info['row'])
+                elasticenergy.grid(column=3, row=grid_info['row'])
+                appliedwork.grid(column=4, row=grid_info['row'])
+                contactwork.grid(column=5, row=grid_info['row'])
+                frictionwork.grid(column=6, row=grid_info['row'])
+                volume.grid(column=7, row=grid_info['row'])
+                mass.grid(column=8, row=grid_info['row'])
+    def save_energy(self):
+        file_name = asksaveasfilename(defaultextension ='.xls',filetypes=(("Excel book", "*.xls"), ("all files", "*.*")))
+        print(file_name)
+        wb = xlwt.Workbook()
+        ws = wb.add_sheet('Энергия и работа',cell_overwrite_ok=True)
+        titles = ['Полная энергия деформации, Дж','Полная работа, Дж','Полная энергия упругой деформации, Дж',
+                  'Полная работа приложеных сил/перемещений, Дж','Полная работа контактных  сил, Дж',
+                  'Полная работа сил трения  в контакте, Дж','Объём, мм^3','Масса, кг']
+        # Устанавливаем перенос по словам, выравнивание
+        alignment = xlwt.Alignment()
+        alignment.wrap = 1
+        alignment.horz = xlwt.Alignment.HORZ_CENTER  # May be: HORZ_GENERAL, HORZ_LEFT, HORZ_CENTER, HORZ_RIGHT, HORZ_FILLED, HORZ_JUSTIFIED, HORZ_CENTER_ACROSS_SEL, HORZ_DISTRIBUTED
+        alignment.vert = xlwt.Alignment.VERT_CENTER  # May be: VERT_TOP, VERT_CENTER, VERT_BOTTOM, VERT_JUSTIFIED, VERT_DISTRIBUTED
+        # Устанавливаем шрифт
+        font = xlwt.Font()
+        font.name = 'Arial Cyr'
+        font.bold = True
+        # Устанавливаем границы
+        borders = xlwt.Borders()
+        borders.left = xlwt.Borders.THIN  # May be: NO_LINE, THIN, MEDIUM, DASHED, DOTTED, THICK, DOUBLE, HAIR, MEDIUM_DASHED, THIN_DASH_DOTTED, MEDIUM_DASH_DOTTED, THIN_DASH_DOT_DOTTED, MEDIUM_DASH_DOT_DOTTED, SLANTED_MEDIUM_DASH_DOTTED, or 0x00 through 0x0D.
+        borders.right = xlwt.Borders.THIN
+        borders.top = xlwt.Borders.THIN
+        borders.bottom = xlwt.Borders.THIN
+        style_titles = xlwt.XFStyle()
+        style_titles.font = font
+        style_titles.alignment = alignment
+        style_titles.borders = borders
+        style_data = xlwt.XFStyle()
+        style_data.borders = borders
+        for i in range(1,9):
+            ws.write_merge(1, 8, i, i,titles[i - 1],style_titles)
+            #ws.write(1, i, titles[i - 1], style)
+        c = 9
+        for problem in self.energy:
+            r = 1
+            for energy in problem:
+                ws.write(c,r,energy,style_data)
+                r += 1
+            c += 1
+        wb.save(file_name)
 if __name__ =='__main__':
     GUI().run()
 

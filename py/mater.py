@@ -65,7 +65,14 @@ label.grid(column=0,row=1,padx=5,pady=5)
 
 label = Label(tab1,text = 'Изменен:')
 label.grid(column=1,row=1,padx=5,pady=5)
-
+def test():
+    pass
+btn = Button(tab1,text = 'test', command = lambda : test())
+btn.grid(column=1,row=20,padx=5,pady=5)
+def test():
+    name = py_get_string('mater_name_index(1)')
+    out = py_get_float('mater_par(Rezina_19-320-3_germosloi,structural:mooney_c01)')
+    print(out)
 root.title('Материалы')
 root.geometry('1000x1000')
 root.mainloop()
