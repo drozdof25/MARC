@@ -69,43 +69,61 @@ class GUI(Tk):
         self.frame3 = LabelFrame(self, text='Энергия и работа')
         self.frame3.pack()
 
+        e_lbl0 = Label(self.frame3,text = 'Задача')
+        e_lbl0.grid(column=0, row=0)
+        self.e_lbl0_1 = Label(self.frame3,text = 'Посадка')
+        self.e_lbl0_1.grid(column=0, row=1)
+        self.e_lbl0_2 = Label(self.frame3, text='Обжатие')
+        self.e_lbl0_2.grid(column=0, row=2)
+        self.e_lbl0_3 = Label(self.frame3, text='Качение')
+        self.e_lbl0_3 .grid(column=0, row=3)
+
         e_lbl1 = Label(self.frame3,text = 'Инкремент')
-        e_lbl1.grid(column = 0 ,row =0)
+        e_lbl1.grid(column = 1 ,row =0)
         self.e_combo1 = Combobox(self.frame3)
-        self.e_combo1.grid(column=0, row=1)
+        self.e_combo1.grid(column=1, row=1)
         self.e_combo2 = Combobox(self.frame3)
-        self.e_combo2.grid(column=0, row=2)
+        self.e_combo2.grid(column=1, row=2)
         self.e_combo3 = Combobox(self.frame3)
-        self.e_combo3.grid(column=0, row=3)
+        self.e_combo3.grid(column=1, row=3)
         e_lbl2 = Label(self.frame3, text='Полная энергия \n деформации, Дж')
-        e_lbl2.grid(column=1, row=0)
+        e_lbl2.grid(column=2, row=0)
 
         e_lbl3 = Label(self.frame3, text='Полная работа, Дж')
-        e_lbl3.grid(column=2, row=0)
+        e_lbl3.grid(column=3, row=0)
 
         e_lbl4 = Label(self.frame3, text='Полная энергия упругой \n деформации, Дж')
-        e_lbl4.grid(column=3, row=0)
+        e_lbl4.grid(column=4, row=0)
 
         e_lbl5 = Label(self.frame3, text='Полная работа приложеных \n сил/перемещений, Дж')
-        e_lbl5.grid(column=4, row=0)
+        e_lbl5.grid(column=5, row=0)
 
         e_lbl6 = Label(self.frame3, text='Полная работа контактных \n сил, Дж')
-        e_lbl6.grid(column=5, row=0)
+        e_lbl6.grid(column=6, row=0)
 
         e_lbl7 = Label(self.frame3, text='Полная работа сил трения \n в контакте, Дж')
-        e_lbl7.grid(column=6, row=0)
+        e_lbl7.grid(column=7, row=0)
 
         e_lbl8 = Label(self.frame3, text='Объём, мм^3')
-        e_lbl8.grid(column=7, row=0)
+        e_lbl8.grid(column=8, row=0)
 
         e_lbl9 = Label(self.frame3, text='Масса, кг')
-        e_lbl9.grid(column=8, row=0)
+        e_lbl9.grid(column=9, row=0)
+
+        e_lbl10 = Label(self.frame3,text = 'Радиус шины,мм' )
+        e_lbl10.grid(column=10, row=0)
+
+        e_lbl10 = Label(self.frame3, text='Динамический радиус,мм')
+        e_lbl10.grid(column=11, row=0)
+
+        e_lbl11 = Label(self.frame3, text='Нагрузка Q,кг')
+        e_lbl11.grid(column=12, row=0)
 
 
         e_btn = Button(self.frame3,text = 'обновить',command = lambda :self.refresh_energy())
-        e_btn.grid(column=7, row=4)
+        e_btn.grid(column=8, row=4)
         e_btn2 = Button(self.frame3, text='сохранить',command = lambda : self.save_energy())
-        e_btn2.grid(column=8, row=4)
+        e_btn2.grid(column=9, row=4)
 
     def open_file(self,problem):
         op = askopenfilename(filetypes = (("Binary Post File","*.t16"),("all files","*.*")))
@@ -141,6 +159,7 @@ class GUI(Tk):
                 incs.append(i)
             self.combo2['values'] = incs
             self.combo2.current(min(incs))
+            incs.append(NONE)
             self.e_combo1['values'] = incs
             self.e_combo2['values'] = incs
             self.e_combo3['values'] = incs
@@ -236,17 +255,41 @@ class GUI(Tk):
     def refresh_energy(self):
         inc_combos = [self.e_combo1,self.e_combo2,self.e_combo3]
         self.energy = []
+        p = post_open(self.post_file3d)
+        p.moveto(0 + 1)
+        node_y = []
+        for i in range(0, p.nodes()):
+            dx, dy, dz = p.node_displacement(i)
+            node_y.append(p.node(i).y + dy)
+        radius = max(node_y)
+        external_force_id = 0
+        for i in range(0,p.node_scalars()):
+            if p.node_scalar_label(i) == 'External Force Y':
+                external_force_id = i
+        node_0 = 0
+        for i in range(0,p.nodes()):
+            if p.node(i).y == 0 and p.node(i).x ==0 and p.node(i).z == 0:
+                node_0 = i
+                break
+        tire_index = 0
+        for i in range(0, p.cbodies()):
+            if p.cbody(i).type ==0:
+                tire_index = 0
         for inc_combo in inc_combos:
+            job = ''
+            if inc_combos.index(inc_combo)==0:
+                job = 'Посадка'
+            elif inc_combos.index(inc_combo)==1:
+                job = 'Обжатие'
+            elif inc_combos.index(inc_combo) == 2:
+                job = 'Качение'
+            grid_info = inc_combo.grid_info()
             try:
                 inc = int(inc_combo.get())
             except:
                 continue
             else:
-
-                p = post_open(self.post_file3d)
                 p.moveto(inc + 1)
-
-                grid_info = inc_combo.grid_info()
                 strainenergy = Label(self.frame3,text = str(p.strainenergy/1000))
                 work = Label(self.frame3,text=str(p.work / 1000))
                 elasticenergy = Label(self.frame3,text=str(p.elasticenergy / 1000))
@@ -255,24 +298,51 @@ class GUI(Tk):
                 frictionwork = Label(self.frame3,text=str(p.frictionwork/ 1000))
                 volume = Label(self.frame3,text=str(p.volume))
                 mass = Label(self.frame3,text=str(p.mass *1000))
-                self.energy.append([p.strainenergy/1000,p.work / 1000,p.elasticenergy / 1000,p.appliedwork / 1000,
-                               p.contactwork / 1000,p.frictionwork/ 1000,p.volume,p.mass *1000])
-                strainenergy.grid(column = 1, row = grid_info['row'])
-                work.grid(column=2, row=grid_info['row'])
-                elasticenergy.grid(column=3, row=grid_info['row'])
-                appliedwork.grid(column=4, row=grid_info['row'])
-                contactwork.grid(column=5, row=grid_info['row'])
-                frictionwork.grid(column=6, row=grid_info['row'])
-                volume.grid(column=7, row=grid_info['row'])
-                mass.grid(column=8, row=grid_info['row'])
+                rad = Label(self.frame3,text = str(radius))
+                energ = [job,int(inc_combo.get()),p.strainenergy/1000,p.work / 1000,p.elasticenergy / 1000,p.appliedwork / 1000,
+                               p.contactwork / 1000,p.frictionwork/ 1000,p.volume,p.mass *1000,radius]
+                if energ[0] != 'Посадка':
+                    node_y = []
+                    for i in range(0, p.nodes()):
+                        dx, dy, dz = p.node_displacement(i)
+                        node_y.append(p.node(i).y + dy)
+                    energ.append(abs(min(node_y)))
+                    rad_antiprogib = abs(max(node_y))
+                    din_radius = Label(self.frame3,text = str(abs(min(node_y))))
+                    din_radius.grid(column=11, row=grid_info['row'])
+                    load = round(p.node_scalar(node_0,external_force_id)/9.81)
+                    energ.append(load)
+                    load_lbl = Label(self.frame3,text = str(load))
+                    load_lbl.grid(column=12, row=grid_info['row'])
+                    progib = radius - abs(min(node_y))
+                    antiprogib = rad_antiprogib - radius
+                    energ.append(progib)
+                    energ.append(antiprogib)
+                    if energ[0] == 'Качение':
+                        velx,vely,velz = p.cbody_velocity(tire_index)
+                        line_vel = float(velz) *0.0036
+                        print(p.cbody(tire_index))
+                self.energy.append(energ)
+                strainenergy.grid(column = 2, row = grid_info['row'])
+                work.grid(column=3, row=grid_info['row'])
+                elasticenergy.grid(column=4, row=grid_info['row'])
+                appliedwork.grid(column=5, row=grid_info['row'])
+                contactwork.grid(column=6, row=grid_info['row'])
+                frictionwork.grid(column=7, row=grid_info['row'])
+                volume.grid(column=8, row=grid_info['row'])
+                mass.grid(column=9, row=grid_info['row'])
+                rad.grid(column=10, row=1,rowspan = 3)
+
     def save_energy(self):
         file_name = asksaveasfilename(defaultextension ='.xls',filetypes=(("Excel book", "*.xls"), ("all files", "*.*")))
         print(file_name)
         wb = xlwt.Workbook()
         ws = wb.add_sheet('Энергия и работа',cell_overwrite_ok=True)
-        titles = ['Полная энергия деформации, Дж','Полная работа, Дж','Полная энергия упругой деформации, Дж',
+        titles = ['Задача','Инкремент','Полная энергия деформации, Дж','Полная работа, Дж','Полная энергия упругой деформации, Дж',
                   'Полная работа приложеных сил/перемещений, Дж','Полная работа контактных  сил, Дж',
-                  'Полная работа сил трения  в контакте, Дж','Объём, мм^3','Масса, кг']
+                  'Полная работа сил трения  в контакте, Дж','Объём, мм^3','Масса, кг','Радиус шины, мм','Динамический радиус, мм',
+                  'Нагрузка Q, кг','Прогиб, мм','Антипрогиб, мм','Радиус качения, мм','Деформация сжатия протектора в окружном направлении %',
+                  'Линейная скорость качения шины, км/ч','Угловая скорость качения шины, рад/с','Fzroad,Н','КСК']
         # Устанавливаем перенос по словам, выравнивание
         alignment = xlwt.Alignment()
         alignment.wrap = 1
@@ -294,14 +364,17 @@ class GUI(Tk):
         style_titles.borders = borders
         style_data = xlwt.XFStyle()
         style_data.borders = borders
-        for i in range(1,9):
+        for i in range(1,len(titles)+1):
             ws.write_merge(1, 8, i, i,titles[i - 1],style_titles)
             #ws.write(1, i, titles[i - 1], style)
         c = 9
         for problem in self.energy:
             r = 1
             for energy in problem:
-                ws.write(c,r,energy,style_data)
+                if r == 11:
+                    ws.write_merge(9,11,r,r,energy,style_data)
+                else:
+                    ws.write(c,r,energy,style_data)
                 r += 1
             c += 1
         wb.save(file_name)
