@@ -271,10 +271,14 @@ class GUI(Tk):
             if p.node(i).y == 0 and p.node(i).x ==0 and p.node(i).z == 0:
                 node_0 = i
                 break
-        tire_index = 0
+        tire_index = None
+        road_index = None
         for i in range(0, p.cbodies()):
+            print(str(p.cbody(i).type) +" "+ str(p.cbody_name(i)))
             if p.cbody(i).type ==0:
-                tire_index = 0
+                tire_index = i
+            if p.cbody(i).type == 2:
+                road_index = i
         for inc_combo in inc_combos:
             job = ''
             if inc_combos.index(inc_combo)==0:
@@ -320,8 +324,20 @@ class GUI(Tk):
                     energ.append(antiprogib)
                     if energ[0] == 'Качение':
                         velx,vely,velz = p.cbody_velocity(tire_index)
-                        line_vel = float(velz) *0.0036
-                        print(p.cbody(tire_index))
+                        line_vel = round(float(velz) *0.0036)
+                        rotat = p.cbody_rotation(tire_index)
+                        print(rotat)
+                        angle_vel = rotat * 2 * 3.141592653589793238462643
+                        rad_kach = line_vel*1000000/3600/angle_vel
+                        deformation = (1-rad_kach/radius) *100
+                        fx,fy,force_z_road = p.cbody_force(road_index)
+                        ksk = abs(force_z_road)/p.node_scalar(node_0,external_force_id)
+                        energ.append(rad_kach)
+                        energ.append(deformation)
+                        energ.append(line_vel)
+                        energ.append(angle_vel)
+                        energ.append(abs(force_z_road))
+                        energ.append(ksk)
                 self.energy.append(energ)
                 strainenergy.grid(column = 2, row = grid_info['row'])
                 work.grid(column=3, row=grid_info['row'])
@@ -352,6 +368,11 @@ class GUI(Tk):
         font = xlwt.Font()
         font.name = 'Arial Cyr'
         font.bold = True
+        #Фон
+        patern = xlwt.Pattern()
+        patern.pattern = xlwt.Pattern.SOLID_PATTERN
+        patern.pattern_fore_colour = xlwt.Style.colour_map['yellow']
+
         # Устанавливаем границы
         borders = xlwt.Borders()
         borders.left = xlwt.Borders.THIN  # May be: NO_LINE, THIN, MEDIUM, DASHED, DOTTED, THICK, DOUBLE, HAIR, MEDIUM_DASHED, THIN_DASH_DOTTED, MEDIUM_DASH_DOTTED, THIN_DASH_DOT_DOTTED, MEDIUM_DASH_DOT_DOTTED, SLANTED_MEDIUM_DASH_DOTTED, or 0x00 through 0x0D.
@@ -364,6 +385,12 @@ class GUI(Tk):
         style_titles.borders = borders
         style_data = xlwt.XFStyle()
         style_data.borders = borders
+        style_data2 = xlwt.XFStyle()
+        style_data2.pattern = patern
+        style_data2.borders = borders
+        style_data2.font = font
+        style_data2.alignment =alignment
+
         for i in range(1,len(titles)+1):
             ws.write_merge(1, 8, i, i,titles[i - 1],style_titles)
             #ws.write(1, i, titles[i - 1], style)
@@ -372,9 +399,13 @@ class GUI(Tk):
             r = 1
             for energy in problem:
                 if r == 11:
-                    ws.write_merge(9,11,r,r,energy,style_data)
+                    ws.write_merge(9,11,r,r,energy,style_data2)
+                elif r==14:
+                    ws.write(c,r,energy,style_data2)
+                elif r == 21:
+                    ws.write(c, r, energy, style_data2)
                 else:
-                    ws.write(c,r,energy,style_data)
+                    ws.write(c, r, energy, style_data)
                 r += 1
             c += 1
         wb.save(file_name)
