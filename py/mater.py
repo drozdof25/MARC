@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import os
-#from py_mentat import*
+from py_mentat import*
 from tkinter import*
 from tkinter import ttk
 import time
