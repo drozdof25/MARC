@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*
 import os
-#from py_mentat import*
+from py_mentat import*
 import tkinter as tk
 from tkinter import ttk
 import json
@@ -52,7 +52,7 @@ class MaterialWidget():
         self.data_keys =['Тип', 'Шифр(дата)', 'Шифр(полный)', 'Назначение',
                     'Массовая плотность', 'Твёрдость по шору', 'C10', 'C01', 'K']
         self.conn_on = False
-
+        self.changing = False
     def mainloop(self):
         tabControl = ttk.Notebook(self.root)
         tab1 = ttk.Frame(tabControl)
@@ -71,6 +71,8 @@ class MaterialWidget():
 
         button_connect = ttk.Button(button_frame, text='connect',command = lambda :self.conn())
         button_connect.pack(side='left')
+        button_save = ttk.Button(button_frame, text='save_data', command=lambda: self.save_data())
+        button_save.pack(side='left')
         button_add = ttk.Button(button_frame, text='add+',command = lambda :self.add())
         button_add.pack(side='right')
         title_1 = ttk.Frame(self.body_1)
@@ -95,52 +97,30 @@ class MaterialWidget():
         self.scrollable_body = Scrollable(self.data_1)
         self.lbl_list = []
         for material in self.materials:
-            mat_lbl_dict = dict()
-            for key in self.data_keys:
-                data = str(material[key])
-                if len(data) > 10:
-                    data = data.replace(' ', '\n')
-                strvar = StringVar()
-                strvar.set(data)
-                lbl = tk.Label(self.scrollable_body, textvariable=strvar, width=13, height=2, borderwidth=2, relief="groove")
-                entry = tk.Entry(self.scrollable_body,textvariable=strvar, width=13)
-                entry.grid(column=self.data_keys.index(key), row=self.materials.index(material))
-                entry.grid_remove()
-                lbl.grid(column=self.data_keys.index(key), row=self.materials.index(material))
-                action_frame1 = ttk.Frame(self.scrollable_body)
-                action_frame1.grid(column=9,row=self.materials.index(material))
-                action_frame2 = ttk.Frame(self.scrollable_body)
-                action_frame2.grid(column=9, row=self.materials.index(material))
-                action_frame2.grid_remove()
-                mat_lbl_dict[key] = [lbl, entry, strvar,action_frame1,action_frame2]
-                btn_edit = tk.Button(action_frame1, text='edit', width=7,command= lambda id = self.materials.index(material): self.edit(id))
-                btn_del = tk.Button(action_frame1, text='del', width=7,command= lambda id = self.materials.index(material): self.delete(id))
-                btn_save = tk.Button(action_frame2, text='save', width=7,command= lambda id = self.materials.index(material): self.save_change(id))
-                btn_cancel = tk.Button(action_frame2, text='cancel', width=7,command= lambda id = self.materials.index(material): self.cancel_change(id))
-                btn_edit.pack(side='left')
-                btn_del.pack(side='left')
-                btn_save.pack(side='left')
-                btn_cancel.pack(side='left')
-            self.lbl_list.append(mat_lbl_dict)
+            self.add_row_data(material,self.materials.index(material))
+        self.changing = False
         self.scrollable_body.update()
         self.conn_on = True
     def add(self):
-        if self.conn_on:
-            self.entry_1 = tk.Entry(self.scrollable_body, width=13)
-            self.entry_2 = tk.Entry(self.scrollable_body, width=13,)
-            self.entry_3 = tk.Entry(self.scrollable_body, width=13)
-            self.entry_4 = tk.Entry(self.scrollable_body, width=13)
-            self.entry_5 = tk.Entry(self.scrollable_body, width=13)
-            self.entry_6 = tk.Entry(self.scrollable_body, width=13)
-            self.entry_1.grid(column=0, row=len(self.materials), padx=1,pady=1)
-            self.entry_2.grid(column=1, row=len(self.materials), padx=1, pady=1)
-            self.entry_3.grid(column=2, row=len(self.materials), padx=1, pady=1)
-            self.entry_4.grid(column=3, row=len(self.materials), padx=1, pady=1)
-            self.entry_5.grid(column=4, row=len(self.materials), padx=1, pady=1)
-            self.entry_6.grid(column=5, row=len(self.materials), padx=1, pady=1)
-            self.btn = ttk.Button(self.scrollable_body,text='одноосное растяжение',width =39,command = lambda : self.open_file_odnoos())
-            self.btn.grid(column=6, row=len(self.materials), padx=1, pady=1,columnspan=3)
-    def open_file_odnoos(self):
+        if not self.changing:
+            data_dict = dict()
+            r = len(self.materials)
+            for key in self.data_keys:
+                data_dict[key] = ''
+            self.add_row_data(data_dict,r)
+            for key, value in self.lbl_list[r].items():
+                value[0].grid_remove()
+                value[1].grid()
+                value[3].grid_remove()
+                value[4].grid()
+                if self.data_keys.index(key) in range(6,9):
+                    value[1].grid_remove()
+                if self.data_keys.index(key)==8:
+                    btn = ttk.Button(self.scrollable_body, text='одноосное растяжение', width=39,
+                            command=lambda row =r: self.open_file_odnoos(row))
+                    btn.grid(column=6, row=r, padx=1, pady=1, columnspan=3)
+                    value.append(btn)
+    def open_file_odnoos(self,r):
         op = askopenfilename(filetypes = (("text files","*.txt"),("all files","*.*")))
         py_send('@popup(table_pm,0) *md_table_read_any "%s"' % op)
         table_name = py_get_string('table_name()')
@@ -156,98 +136,104 @@ class MaterialWidget():
         py_send('*xcv_compute')
         py_send('*xcv_create')
         mater_name = py_get_string('mater_name()')
-        self.c10 = py_get_float('mater_par(%s,structural:mooney_c10)' % mater_name)
-        self.c01 = py_get_float('mater_par(%s,structural:mooney_c01)' % mater_name)
-        self.bulk_modulus = (self.c10+self.c01)*10000
+        c10 = py_get_float('mater_par(%s,structural:mooney_c10)' % mater_name)
+        c01 = py_get_float('mater_par(%s,structural:mooney_c01)' % mater_name)
+        py_send('*remove_current_mater')
+        py_send('*remove_current_table')
+        bulk_modulus = (c10+c01)*10000
         f= open(op)
         odnoos = []
         for line in f:
             l = line.split()
             odnoos.append(l)
-        self.btn.grid_remove()
-        lbl_c10 = tk.Label(self.scrollable_body, text=str(round(self.c10 ,7)), width=13, height=2, borderwidth=2,
-                           relief="groove")
-        lbl_c10.grid(column=6, row=len(self.materials))
-        lbl_c01 = tk.Label(self.scrollable_body, text=str(round(self.c01, 7)), width=13, height=2, borderwidth=2,
-                           relief="groove")
-        lbl_c01.grid(column=7, row=len(self.materials))
-        lbl_bulk = tk.Label(self.scrollable_body, text=str(round(self.bulk_modulus, 2)), width=13, height=2, borderwidth=2,
-                           relief="groove")
-        lbl_bulk.grid(column=8, row=len(self.materials))
-        py_send('*remove_current_mater')
-        py_send('*remove_current_table')
-        self.action_frame = ttk.Frame(self.scrollable_body)
-        self.action_frame.grid(column=9, row=len(self.materials))
-        btn_save = tk.Button(self.action_frame,text ='save',width =7,command = lambda : self.save())
-        btn_cancel = tk.Button(self.action_frame,text ='cancel',width =7)
-        btn_save.pack(side = 'left')
-        btn_cancel.pack(side = 'left')
-    def save(self):
-        type = self.entry_1.get()
-        shifr_date = self.entry_2.get()
-        shifr =self.entry_3.get()
-        destination = self.entry_4.get()
-        mass_density = self.entry_5.get()
-        hard_shor =self.entry_6.get()
-        self.entry_1.grid_remove()
-        self.entry_2.grid_remove()
-        self.entry_3.grid_remove()
-        self.entry_4.grid_remove()
-        self.entry_5.grid_remove()
-        self.entry_6.grid_remove()
-        self.lbl_1 = tk.Label(self.scrollable_body, text=type, width=13, height=2, borderwidth=2,
-                           relief="groove")
-        self.lbl_2 =tk.Label(self.scrollable_body, text=shifr_date, width=13, height=2, borderwidth=2,
-                           relief="groove")
-        self.lbl_3 =tk.Label(self.scrollable_body, text=shifr, width=13, height=2, borderwidth=2,
-                           relief="groove")
-        self.lbl_4 = tk.Label(self.scrollable_body, text=destination, width=13, height=2, borderwidth=2,
-                           relief="groove")
-        self.lbl_5 = tk.Label(self.scrollable_body, text= mass_density, width=13, height=2, borderwidth=2,
-                           relief="groove")
-        self.lbl_6 = tk.Label(self.scrollable_body, text= hard_shor, width=13, height=2, borderwidth=2,
-                           relief="groove")
-        self.lbl_1.grid(column=0, row=len(self.materials))
-        self.lbl_2.grid(column=1, row=len(self.materials))
-        self.lbl_3.grid(column=2, row=len(self.materials))
-        self.lbl_4.grid(column=3, row=len(self.materials))
-        self.lbl_5.grid(column=4, row=len(self.materials))
-        self.lbl_6.grid(column=5, row=len(self.materials))
-        self.action_frame.grid_remove()
-        material = {
-            'Тип': type,
-            'Шифр(дата)': shifr_date,
-            'Шифр(полный)': shifr,
-            'Назначение': destination,
-            'Массовая плотность': mass_density,
-            'Твёрдость по шору': hard_shor,
-            'C10': self.c10,
-            'C01': self.c01,
-            'K': self.bulk_modulus
-        }
-        self.materials.append(material)
+        self.lbl_list[r]['C10'][2].set(round(c10,6))
+        self.lbl_list[r]['C10'][1].grid()
+        self.lbl_list[r]['C01'][2].set(round(c01,6))
+        self.lbl_list[r]['C01'][1].grid()
+        self.lbl_list[r]['K'][2].set(round(bulk_modulus,2))
+        self.lbl_list[r]['K'][5].grid_remove()
+        self.lbl_list[r]['K'][1].grid()
+        self.lbl_list[r]['K'].append(odnoos)
     def edit(self,index):
+        self.changing = True
         for key,value in self.lbl_list[index].items():
             value[0].grid_remove()
             value[1].grid()
             value[3].grid_remove()
             value[4].grid()
     def save_change(self,index):
+        self.changing = False
+        data_dict = dict()
         for key,value in self.lbl_list[index].items():
             value[0].grid()
             value[1].grid_remove()
             value[3].grid()
             value[4].grid_remove()
-            self.materials[index][key] = value[2].get()
+            if index < len(self.materials):
+                self.materials[index][key] = value[2].get()
+            else:
+                data_dict[key] = value[2].get()
+                if self.data_keys.index(key)==8:
+                    data_dict['Одноосное растяжение'] = value[6]
+        if not index < len(self.materials):
+            self.materials.append(data_dict)
     def cancel_change(self,index):
-        for key, value in self.lbl_list[index].items():
-            value[0].grid()
-            value[1].grid_remove()
-            value[2].set(self.materials[index][key])
-            value[3].grid()
-            value[4].grid_remove()
+        self.changing = False
+        if index < len(self.materials):
+            for key, value in self.lbl_list[index].items():
+                value[0].grid()
+                value[1].grid_remove()
+                value[2].set(self.materials[index][key])
+                value[3].grid()
+                value[4].grid_remove()
+        else:
+            for key, value in self.lbl_list[index].items():
+                value[0].grid_forget()
+                value[1].grid_forget()
+                value[3].grid_forget()
+                value[4].grid_forget()
+                if self.data_keys.index(key) == 8:
+                    value[5].grid_forget()
+            self.lbl_list.pop(index)
     def delete(self,index):
         self.materials.pop(index)
         self.data_1.pack_forget()
         self.conn()
+    def add_row_data(self,data_dict,r):
+        self.changing = True
+        object_dict = dict()
+        for key in self.data_keys:
+            data = str(data_dict[key])
+            if len(data) > 10:
+                data = data.replace(' ', '\n')
+            strvar = StringVar()
+            strvar.set(data)
+            lbl = tk.Label(self.scrollable_body, textvariable=strvar, width=13, height=2, borderwidth=2,
+                           relief="groove")
+            entry = tk.Entry(self.scrollable_body, textvariable=strvar, width=13)
+            entry.grid(column=self.data_keys.index(key), row=r)
+            entry.grid_remove()
+            lbl.grid(column=self.data_keys.index(key), row=r)
+            action_frame1 = ttk.Frame(self.scrollable_body)
+            action_frame1.grid(column=9, row=r)
+            action_frame2 = ttk.Frame(self.scrollable_body)
+            action_frame2.grid(column=9, row=r)
+            action_frame2.grid_remove()
+            object_dict[key] = [lbl, entry, strvar, action_frame1, action_frame2]
+            btn_edit = tk.Button(action_frame1, text='edit', width=7,
+                                 command=lambda id=r: self.edit(id))
+            btn_del = tk.Button(action_frame1, text='del', width=7,
+                                command=lambda id=r: self.delete(id))
+            btn_save = tk.Button(action_frame2, text='save', width=7,
+                                 command=lambda id=r: self.save_change(id))
+            btn_cancel = tk.Button(action_frame2, text='cancel', width=7,
+                                   command=lambda id=r: self.cancel_change(id))
+            btn_edit.pack(side='left')
+            btn_del.pack(side='left')
+            btn_save.pack(side='left')
+            btn_cancel.pack(side='left')
+        self.lbl_list.append(object_dict)
+    def save_data(self):
+        with open("data_file.json", "w") as write_file:
+            json.dump(self.materials, write_file)
 MaterialWidget().mainloop()
