@@ -208,8 +208,7 @@ class MaterialWidget():
                 data = data.replace(' ', '\n')
             strvar = StringVar()
             strvar.set(data)
-            lbl = tk.Label(self.scrollable_body, textvariable=strvar, width=13, height=2, borderwidth=2,
-                           relief="groove")
+            lbl = tk.Label(self.scrollable_body, textvariable=strvar, width=13, height=2,
             entry = tk.Entry(self.scrollable_body, textvariable=strvar, width=13)
             entry.grid(column=self.data_keys.index(key), row=r)
             entry.grid_remove()
@@ -236,4 +235,7 @@ class MaterialWidget():
     def save_data(self):
         with open("data_file.json", "w") as write_file:
             json.dump(self.materials, write_file)
+    def add_to_marc(self,index):
+        py_send('*new_md_table 1 1')
+        table_name = py_get_string('table_name()')
 MaterialWidget().mainloop()

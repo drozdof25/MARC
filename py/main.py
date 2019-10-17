@@ -89,6 +89,61 @@ class GUI(Tk):
         e_lbl2 = Label(self.frame3, text='Полная энергия \n деформации, Дж')
         e_lbl2.grid(column=2, row=0)
 
+        self.strainenergy = []
+        for i in range(0,3):
+            self.strainenergy.append(Label(self.frame3, width=15, height=2, borderwidth=2, relief="groove"))
+            self.strainenergy[i].grid(column=2, row=i+1)
+
+        self.work = []
+        for i in range(0, 3):
+            self.work.append(Label(self.frame3, width=15, height=2, borderwidth=2, relief="groove"))
+            self.work[i].grid(column=3, row=i + 1)
+
+        self.elasticenergy = []
+        for i in range(0, 3):
+            self.elasticenergy.append(Label(self.frame3, width=15, height=2, borderwidth=2, relief="groove"))
+            self.elasticenergy[i].grid(column=4, row=i + 1)
+
+        self.appliedwork = []
+        for i in range(0, 3):
+            self.appliedwork.append(Label(self.frame3, width=15, height=2, borderwidth=2, relief="groove"))
+            self.appliedwork[i].grid(column=5, row=i + 1)
+
+        self.contactwork = []
+        for i in range(0, 3):
+            self.contactwork.append(Label(self.frame3, width=15, height=2, borderwidth=2, relief="groove"))
+            self.contactwork[i].grid(column=6, row=i + 1)
+
+        self.frictionwork = []
+        for i in range(0, 3):
+            self.frictionwork.append(Label(self.frame3, width=15, height=2, borderwidth=2, relief="groove"))
+            self.frictionwork[i].grid(column=7, row=i + 1)
+
+        self.volume = []
+        for i in range(0, 3):
+            self.volume.append(Label(self.frame3, width=15, height=2, borderwidth=2, relief="groove"))
+            self.volume[i].grid(column=8, row=i + 1)
+
+        self.mass = []
+        for i in range(0, 3):
+            self.mass.append(Label(self.frame3, width=15, height=2, borderwidth=2, relief="groove"))
+            self.mass[i].grid(column=9, row=i + 1)
+
+        self.rad = []
+        for i in range(0, 3):
+            self.rad.append(Label(self.frame3, width=15, height=2, borderwidth=2, relief="groove"))
+            self.rad[i].grid(column=10, row=i + 1)
+
+        self.din_rad = []
+        for i in range(0, 3):
+            self.din_rad.append(Label(self.frame3, width=15, height=2, borderwidth=2, relief="groove"))
+            self.din_rad[i].grid(column=11, row=i + 1)
+
+        self.load_lbl = []
+        for i in range(0, 3):
+            self.load_lbl.append(Label(self.frame3, width=15, height=2, borderwidth=2, relief="groove"))
+            self.load_lbl[i].grid(column=12, row=i + 1)
+
         e_lbl3 = Label(self.frame3, text='Полная работа, Дж')
         e_lbl3.grid(column=3, row=0)
 
@@ -132,14 +187,14 @@ class GUI(Tk):
             self.lbl3['text'] = op
             self.check_state1.set(True)
             self.get_data(problem)
-            print(self.elements_2d)
+
         else:
             self.post_file3d = op
             self.lbl4['text'] = op
             self.check_state2.set(True)
             self.check_state3.set(True)
             self.get_data(problem)
-            print(self.elements_3d)
+
         if self.lbl3['text'] and self.lbl4['text']:
             self.total_rep = int(self.elements_3d / self.elements_2d)
             print(self.total_rep)
@@ -274,7 +329,7 @@ class GUI(Tk):
         tire_index = None
         road_index = None
         for i in range(0, p.cbodies()):
-            print(str(p.cbody(i).type) +" "+ str(p.cbody_name(i)))
+
             if p.cbody(i).type ==0:
                 tire_index = i
             if p.cbody(i).type == 2:
@@ -294,15 +349,6 @@ class GUI(Tk):
                 continue
             else:
                 p.moveto(inc + 1)
-                strainenergy = Label(self.frame3,text = str(p.strainenergy/1000))
-                work = Label(self.frame3,text=str(p.work / 1000))
-                elasticenergy = Label(self.frame3,text=str(p.elasticenergy / 1000))
-                appliedwork = Label(self.frame3,text=str(p.appliedwork / 1000))
-                contactwork = Label(self.frame3,text=str(p.contactwork / 1000))
-                frictionwork = Label(self.frame3,text=str(p.frictionwork/ 1000))
-                volume = Label(self.frame3,text=str(p.volume))
-                mass = Label(self.frame3,text=str(p.mass *1000))
-                rad = Label(self.frame3,text = str(radius))
                 energ = [job,int(inc_combo.get()),p.strainenergy/1000,p.work / 1000,p.elasticenergy / 1000,p.appliedwork / 1000,
                                p.contactwork / 1000,p.frictionwork/ 1000,p.volume,p.mass *1000,radius]
                 if energ[0] != 'Посадка':
@@ -312,12 +358,11 @@ class GUI(Tk):
                         node_y.append(p.node(i).y + dy)
                     energ.append(abs(min(node_y)))
                     rad_antiprogib = abs(max(node_y))
-                    din_radius = Label(self.frame3,text = str(abs(min(node_y))))
-                    din_radius.grid(column=11, row=grid_info['row'])
+
+                    self.din_rad[grid_info['row']-1]['text'] = str(round(abs(min(node_y)),4))
                     load = round(p.node_scalar(node_0,external_force_id)/9.81)
                     energ.append(load)
-                    load_lbl = Label(self.frame3,text = str(load))
-                    load_lbl.grid(column=12, row=grid_info['row'])
+                    self.load_lbl[grid_info['row']-1]['text'] = str(load)
                     progib = radius - abs(min(node_y))
                     antiprogib = rad_antiprogib - radius
                     energ.append(progib)
@@ -326,7 +371,7 @@ class GUI(Tk):
                         velx,vely,velz = p.cbody_velocity(tire_index)
                         line_vel = round(float(velz) *0.0036)
                         rotat = p.cbody_rotation(tire_index)
-                        print(rotat)
+
                         angle_vel = rotat * 2 * 3.141592653589793238462643
                         rad_kach = line_vel*1000000/3600/angle_vel
                         deformation = (1-rad_kach/radius) *100
@@ -339,15 +384,16 @@ class GUI(Tk):
                         energ.append(abs(force_z_road))
                         energ.append(ksk)
                 self.energy.append(energ)
-                strainenergy.grid(column = 2, row = grid_info['row'])
-                work.grid(column=3, row=grid_info['row'])
-                elasticenergy.grid(column=4, row=grid_info['row'])
-                appliedwork.grid(column=5, row=grid_info['row'])
-                contactwork.grid(column=6, row=grid_info['row'])
-                frictionwork.grid(column=7, row=grid_info['row'])
-                volume.grid(column=8, row=grid_info['row'])
-                mass.grid(column=9, row=grid_info['row'])
-                rad.grid(column=10, row=1,rowspan = 3)
+                self.strainenergy[grid_info['row']-1]['text'] = str(round(p.strainenergy/1000,4))
+                self.work[grid_info['row'] - 1]['text'] = str(round(p.work/1000,4))
+                self.elasticenergy[grid_info['row'] - 1]['text'] = str(round(p.elasticenergy / 1000,4))
+                self.appliedwork[grid_info['row'] - 1]['text'] = str(round(p.appliedwork / 1000,4))
+                self.contactwork[grid_info['row'] - 1]['text'] = str(round(p.contactwork / 1000,4))
+                self.frictionwork[grid_info['row'] - 1]['text'] = str(round(p.frictionwork / 1000,4))
+                self.volume[grid_info['row'] - 1]['text'] = str(round(p.volume,4))
+                self.mass[grid_info['row'] - 1]['text'] = str(round(p.mass*1000,4))
+                self.rad[grid_info['row'] - 1]['text'] = str(round(radius,4))
+
 
     def save_energy(self):
         file_name = asksaveasfilename(defaultextension ='.xls',filetypes=(("Excel book", "*.xls"), ("all files", "*.*")))
