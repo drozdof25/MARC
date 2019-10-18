@@ -6,7 +6,7 @@ import tkinter as tk
 from tkinter import ttk
 import json
 from tkinter.filedialog import *
-
+import transliterate
 
 class Scrollable(tk.Frame):
     """
@@ -120,6 +120,7 @@ class MaterialWidget():
                             command=lambda row =r: self.open_file_odnoos(row))
                     btn.grid(column=6, row=r, padx=1, pady=1, columnspan=3)
                     value.append(btn)
+        self.scrollable_body.update()
     def open_file_odnoos(self,r):
         op = askopenfilename(filetypes = (("text files","*.txt"),("all files","*.*")))
         py_send('@popup(table_pm,0) *md_table_read_any "%s"' % op)
@@ -177,6 +178,7 @@ class MaterialWidget():
                     data_dict['Одноосное растяжение'] = value[6]
         if not index < len(self.materials):
             self.materials.append(data_dict)
+        self.scrollable_body.update()
     def cancel_change(self,index):
         self.changing = False
         if index < len(self.materials):
@@ -208,7 +210,8 @@ class MaterialWidget():
                 data = data.replace(' ', '\n')
             strvar = StringVar()
             strvar.set(data)
-            lbl = tk.Label(self.scrollable_body, textvariable=strvar, width=13, height=2,
+            lbl = tk.Label(self.scrollable_body, textvariable=strvar, width=13, height=2,borderwidth=2,
+                           relief="groove")
             entry = tk.Entry(self.scrollable_body, textvariable=strvar, width=13)
             entry.grid(column=self.data_keys.index(key), row=r)
             entry.grid_remove()
@@ -219,16 +222,19 @@ class MaterialWidget():
             action_frame2.grid(column=9, row=r)
             action_frame2.grid_remove()
             object_dict[key] = [lbl, entry, strvar, action_frame1, action_frame2]
-            btn_edit = tk.Button(action_frame1, text='edit', width=7,
+            btn_edit = tk.Button(action_frame1, text='edit', width=4,
                                  command=lambda id=r: self.edit(id))
-            btn_del = tk.Button(action_frame1, text='del', width=7,
+            btn_del = tk.Button(action_frame1, text='del', width=4,
                                 command=lambda id=r: self.delete(id))
+            btn_marc = tk.Button(action_frame1, text='marc', width=4,
+                                 command=lambda id=r: self.add_to_marc(id))
             btn_save = tk.Button(action_frame2, text='save', width=7,
                                  command=lambda id=r: self.save_change(id))
             btn_cancel = tk.Button(action_frame2, text='cancel', width=7,
                                    command=lambda id=r: self.cancel_change(id))
             btn_edit.pack(side='left')
             btn_del.pack(side='left')
+            btn_marc.pack(side='left')
             btn_save.pack(side='left')
             btn_cancel.pack(side='left')
         self.lbl_list.append(object_dict)
@@ -237,5 +243,33 @@ class MaterialWidget():
             json.dump(self.materials, write_file)
     def add_to_marc(self,index):
         py_send('*new_md_table 1 1')
+        py_send('*table_add')
+        for inc in self.materials[index]['Одноосное растяжение']:
+            py_send('%s %s' % (inc[0],inc[1]))
+        py_send('*set_md_table_type 1')
+        py_send('experimental_data')
+        py_send('*table_fit')
+        type = transliterate.translit(self.materials[index]['Тип'], reversed=True)
+        descript = transliterate.translit(self.materials[index]['Назначение'], reversed=True)
+        shifr =  self.materials[index]['Шифр(полный)']
+        shifr = shifr.replace(' ','_')
+        type = type.replace(' ','_')
+        descript =descript.replace(' ','_')
+        descript = descript.replace('.', '')
+        full_name = type + '_' + shifr +'_' + descript
+        py_send('*table_name %s' % full_name)
         table_name = py_get_string('table_name()')
+        py_send('*set_xcurve_method_time_indep least_squares_ds')
+        py_send('*xcv_table uniaxial %s' % table_name)
+        py_send('*xcv_model mooney2')
+        py_send('*xcv_mode uniaxial on')
+        py_send('*xcv_positive on')
+        py_send('*xcv_extrapolation on')
+        py_send('*xcv_compute')
+        py_send('*xcv_create')
+        mass_den = str(float(self.materials[index]['Массовая плотность'])*0.000000001)
+        py_send('*mater_param general:mass_density %s' % mass_den)
+        mater_name = py_get_string('mater_name()')
+        py_send('*edit_mater %s' % mater_name)
+        py_send('*mater_name %s' % table_name)
 MaterialWidget().mainloop()
