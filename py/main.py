@@ -10,7 +10,7 @@ from collections import OrderedDict,Counter
 import xlwt
 import numpy as np
 import matplotlib.pyplot as plt
-
+import win32com.client
 
 class GUI(Tk):
     def run(self):
@@ -193,6 +193,8 @@ class GUI(Tk):
         self.g_combo2.grid(column = 2, row=0)
         g_btn = Button(frame5, text='получить данные',command = lambda : self.radial_hardness())
         g_btn.grid(column=3, row=0)
+        g_btn = Button(frame5, text='сохранить данные', command=lambda: self.save_radial_hardness())
+        g_btn.grid(column=4, row=0)
     def open_file(self,problem):
         op = askopenfilename(filetypes = (("Binary Post File","*.t16"),("all files","*.*")))
         if problem == '2d':
@@ -405,63 +407,84 @@ class GUI(Tk):
     def save_energy(self):
         file_name = asksaveasfilename(defaultextension ='.xls',filetypes=(("Excel book", "*.xls"), ("all files", "*.*")))
         print(file_name)
-        wb = xlwt.Workbook()
-        ws = wb.add_sheet('Энергия и работа',cell_overwrite_ok=True)
-        titles = ['Задача','Инкремент','Полная энергия деформации, Дж','Полная работа, Дж','Полная энергия упругой деформации, Дж',
-                  'Полная работа приложеных сил/перемещений, Дж','Полная работа контактных  сил, Дж',
-                  'Полная работа сил трения  в контакте, Дж','Объём, мм^3','Масса, кг','Радиус шины, мм','Динамический радиус, мм',
-                  'Нагрузка Q, кг','Прогиб, мм','Антипрогиб, мм','Радиус качения, мм','Деформация сжатия протектора в окружном направлении %',
-                  'Линейная скорость качения шины, км/ч','Угловая скорость качения шины, рад/с','Fzroad,Н','КСК']
-        # Устанавливаем перенос по словам, выравнивание
-        alignment = xlwt.Alignment()
-        alignment.wrap = 1
-        alignment.horz = xlwt.Alignment.HORZ_CENTER  # May be: HORZ_GENERAL, HORZ_LEFT, HORZ_CENTER, HORZ_RIGHT, HORZ_FILLED, HORZ_JUSTIFIED, HORZ_CENTER_ACROSS_SEL, HORZ_DISTRIBUTED
-        alignment.vert = xlwt.Alignment.VERT_CENTER  # May be: VERT_TOP, VERT_CENTER, VERT_BOTTOM, VERT_JUSTIFIED, VERT_DISTRIBUTED
-        # Устанавливаем шрифт
-        font = xlwt.Font()
-        font.name = 'Arial Cyr'
-        font.bold = True
-        #Фон
-        patern = xlwt.Pattern()
-        patern.pattern = xlwt.Pattern.SOLID_PATTERN
-        patern.pattern_fore_colour = xlwt.Style.colour_map['yellow']
-
-        # Устанавливаем границы
-        borders = xlwt.Borders()
-        borders.left = xlwt.Borders.THIN  # May be: NO_LINE, THIN, MEDIUM, DASHED, DOTTED, THICK, DOUBLE, HAIR, MEDIUM_DASHED, THIN_DASH_DOTTED, MEDIUM_DASH_DOTTED, THIN_DASH_DOT_DOTTED, MEDIUM_DASH_DOT_DOTTED, SLANTED_MEDIUM_DASH_DOTTED, or 0x00 through 0x0D.
-        borders.right = xlwt.Borders.THIN
-        borders.top = xlwt.Borders.THIN
-        borders.bottom = xlwt.Borders.THIN
-        style_titles = xlwt.XFStyle()
-        style_titles.font = font
-        style_titles.alignment = alignment
-        style_titles.borders = borders
-        style_data = xlwt.XFStyle()
-        style_data.borders = borders
-        style_data2 = xlwt.XFStyle()
-        style_data2.pattern = patern
-        style_data2.borders = borders
-        style_data2.font = font
-        style_data2.alignment =alignment
-
-        for i in range(1,len(titles)+1):
-            ws.write_merge(1, 8, i, i,titles[i - 1],style_titles)
-            #ws.write(1, i, titles[i - 1], style)
-        c = 9
+        Excel = win32com.client.Dispatch("Excel.Application")
+        wb = Excel.Workbooks.Open(u'D:\\Projects\\MARC+Python\\MARC\\py\\shablon.xls')
+        sheet = wb.ActiveSheet
+        c = 10
         for problem in self.energy:
-            r = 1
+            r = 2
             for energy in problem:
-                if r == 11:
-                    ws.write_merge(9,11,r,r,energy,style_data2)
-                elif r==14:
-                    ws.write(c,r,energy,style_data2)
-                elif r == 21:
-                    ws.write(c, r, energy, style_data2)
+                if r == 12:
+                    sheet.Cells(10,12).value = energy
+                elif r==15:
+                    sheet.Cells(c,r).value = energy
+                elif r == 22:
+                    sheet.Cells(c,r).value = energy
                 else:
-                    ws.write(c, r, energy, style_data)
+                    sheet.Cells(c,r).value = energy
                 r += 1
-            c += 1
-        wb.save(file_name)
+            c+=1
+        # wb = xlwt.Workbook()
+        # ws = wb.add_sheet('Энергия и работа',cell_overwrite_ok=True)
+        # titles = ['Задача','Инкремент','Полная энергия деформации, Дж','Полная работа, Дж','Полная энергия упругой деформации, Дж',
+        #           'Полная работа приложеных сил/перемещений, Дж','Полная работа контактных  сил, Дж',
+        #           'Полная работа сил трения  в контакте, Дж','Объём, мм^3','Масса, кг','Радиус шины, мм','Динамический радиус, мм',
+        #           'Нагрузка Q, кг','Прогиб, мм','Антипрогиб, мм','Радиус качения, мм','Деформация сжатия протектора в окружном направлении %',
+        #           'Линейная скорость качения шины, км/ч','Угловая скорость качения шины, рад/с','Fzroad,Н','КСК']
+        # # Устанавливаем перенос по словам, выравнивание
+        # alignment = xlwt.Alignment()
+        # alignment.wrap = 1
+        # alignment.horz = xlwt.Alignment.HORZ_CENTER  # May be: HORZ_GENERAL, HORZ_LEFT, HORZ_CENTER, HORZ_RIGHT, HORZ_FILLED, HORZ_JUSTIFIED, HORZ_CENTER_ACROSS_SEL, HORZ_DISTRIBUTED
+        # alignment.vert = xlwt.Alignment.VERT_CENTER  # May be: VERT_TOP, VERT_CENTER, VERT_BOTTOM, VERT_JUSTIFIED, VERT_DISTRIBUTED
+        # # Устанавливаем шрифт
+        # font = xlwt.Font()
+        # font.name = 'Arial Cyr'
+        # font.bold = True
+        # #Фон
+        # patern = xlwt.Pattern()
+        # patern.pattern = xlwt.Pattern.SOLID_PATTERN
+        # patern.pattern_fore_colour = xlwt.Style.colour_map['yellow']
+        #
+        # # Устанавливаем границы
+        # borders = xlwt.Borders()
+        # borders.left = xlwt.Borders.THIN  # May be: NO_LINE, THIN, MEDIUM, DASHED, DOTTED, THICK, DOUBLE, HAIR, MEDIUM_DASHED, THIN_DASH_DOTTED, MEDIUM_DASH_DOTTED, THIN_DASH_DOT_DOTTED, MEDIUM_DASH_DOT_DOTTED, SLANTED_MEDIUM_DASH_DOTTED, or 0x00 through 0x0D.
+        # borders.right = xlwt.Borders.THIN
+        # borders.top = xlwt.Borders.THIN
+        # borders.bottom = xlwt.Borders.THIN
+        # style_titles = xlwt.XFStyle()
+        # style_titles.font = font
+        # style_titles.alignment = alignment
+        # style_titles.borders = borders
+        # style_data = xlwt.XFStyle()
+        # style_data.borders = borders
+        # style_data2 = xlwt.XFStyle()
+        # style_data2.pattern = patern
+        # style_data2.borders = borders
+        # style_data2.font = font
+        # style_data2.alignment =alignment
+        #
+        # for i in range(1,len(titles)+1):
+        #     ws.write_merge(1, 8, i, i,titles[i - 1],style_titles)
+        #     #ws.write(1, i, titles[i - 1], style)
+        # c = 9
+        # for problem in self.energy:
+        #     r = 1
+        #     for energy in problem:
+        #         if r == 11:
+        #             ws.write_merge(9,11,r,r,energy,style_data2)
+        #         elif r==14:
+        #             ws.write(c,r,energy,style_data2)
+        #         elif r == 21:
+        #             ws.write(c, r, energy, style_data2)
+        #         else:
+        #             ws.write(c, r, energy, style_data)
+        #         r += 1
+        #     c += 1
+        # wb.save(file_name)
+        file_name = file_name.replace('/', '\\')
+        wb.SaveAs(file_name)
+        wb.Close()
+        Excel.Quit()
     def radial_hardness(self):
         p = post_open(self.post_file3d)
         inc1 = int(self.g_combo1.get())+1
@@ -477,12 +500,14 @@ class GUI(Tk):
             load = p.node_scalar(node_0_index, external_force_id)
             y_ax.append(load)
             x_ax.append(dy)
+        self.radial_hardness_data = [y_ax ,x_ax]
         plt.plot(y_ax,x_ax,marker = 'o',linestyle = 'dashed')
         plt.title('Радиальная жесткость')
         plt.ylabel('Перемещение')
         plt.xlabel('Нагрузка')
         plt.grid(True)
         plt.show()
+
     def get_ekvator_node(self):
         p = post_open(self.post_file3d)
         nodes = dict()
@@ -508,6 +533,24 @@ class GUI(Tk):
             if p.node_scalar_label(i) == scalar:
                 return i
 
+    def save_radial_hardness(self):
+        file_name = asksaveasfilename(defaultextension='.xls',
+                                      filetypes=(("Excel book", "*.xls"), ("all files", "*.*")))
+        print(file_name)
+        Excel = win32com.client.Dispatch("Excel.Application")
+        wb = Excel.Workbooks.Open(u'D:\\Projects\\MARC+Python\\MARC\\py\\shablon.xls')
+        sheet = wb.ActiveSheet
+        r = 2
+        for axe in self.radial_hardness_data:
+            c = 23
+            for value in axe:
+                sheet.Cells(c, r).value = value
+                c += 1
+            r += 1
+        file_name = file_name.replace('/', '\\')
+        wb.SaveAs(file_name)
+        wb.Close()
+        Excel.Quit()
 if __name__ =='__main__':
     GUI().run()
 
