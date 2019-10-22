@@ -9,6 +9,7 @@ from tkinter.ttk import Combobox
 from collections import OrderedDict,Counter
 import xlwt
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 class GUI(Tk):
@@ -180,6 +181,18 @@ class GUI(Tk):
         e_btn2 = Button(self.frame3, text='сохранить',command = lambda : self.save_energy())
         e_btn2.grid(column=9, row=4)
 
+        self.frame4 = LabelFrame(self, text='Жесткости',width = 1700)
+        self.frame4.pack()
+        frame5 = LabelFrame(self.frame4,text = 'Радиальная жесткость')
+        frame5.pack()
+        g_lbl = Label(frame5,text = 'Диапозон инкрементов: ')
+        g_lbl.grid(column = 0, row = 0)
+        self.g_combo1 = Combobox(frame5)
+        self.g_combo2 = Combobox(frame5)
+        self.g_combo1.grid(column = 1, row =0)
+        self.g_combo2.grid(column = 2, row=0)
+        g_btn = Button(frame5, text='получить данные',command = lambda : self.radial_hardness())
+        g_btn.grid(column=3, row=0)
     def open_file(self,problem):
         op = askopenfilename(filetypes = (("Binary Post File","*.t16"),("all files","*.*")))
         if problem == '2d':
@@ -218,7 +231,8 @@ class GUI(Tk):
             self.e_combo1['values'] = incs
             self.e_combo2['values'] = incs
             self.e_combo3['values'] = incs
-
+            self.g_combo1['values'] = incs
+            self.g_combo2['values'] = incs
             p.moveto(0)
             self.elements_3d = p.elements()
 
@@ -303,7 +317,7 @@ class GUI(Tk):
             border_string += str(line) + '\n'
         border_string = re.sub('[[]', '', border_string)
         border_string = re.sub('[]]', '', border_string)
-        file_name = asksaveasfilename(filetypes=(("TXT files", "*.txt"), ("all files", "*.*")))
+        file_name = asksaveasfilename(filetypes=(("txt files", "*.txt"), ("all files", "*.*")))
         f = open(file_name, 'w')
         f.write(border_string)
         f.close()
@@ -317,15 +331,8 @@ class GUI(Tk):
             dx, dy, dz = p.node_displacement(i)
             node_y.append(p.node(i).y + dy)
         radius = max(node_y)
-        external_force_id = 0
-        for i in range(0,p.node_scalars()):
-            if p.node_scalar_label(i) == 'External Force Y':
-                external_force_id = i
-        node_0 = 0
-        for i in range(0,p.nodes()):
-            if p.node(i).y == 0 and p.node(i).x ==0 and p.node(i).z == 0:
-                node_0 = i
-                break
+        external_force_id = self.get_scalar_id('External Force Y')
+        node_0 = self.get_node_0()
         tire_index = None
         road_index = None
         for i in range(0, p.cbodies()):
@@ -455,6 +462,52 @@ class GUI(Tk):
                 r += 1
             c += 1
         wb.save(file_name)
+    def radial_hardness(self):
+        p = post_open(self.post_file3d)
+        inc1 = int(self.g_combo1.get())+1
+        inc2 = int(self.g_combo2.get())+1
+        y_ax = []
+        x_ax = []
+        ekvator_node_index = self.get_ekvator_node()
+        node_0_index = self.get_node_0()
+        external_force_id = self.get_scalar_id('External Force Y')
+        for i in range(inc1,inc2+1):
+            p.moveto(i)
+            dx,dy,dz = p.node_displacement(ekvator_node_index)
+            load = p.node_scalar(node_0_index, external_force_id)
+            y_ax.append(load)
+            x_ax.append(dy)
+        plt.plot(y_ax,x_ax,marker = 'o',linestyle = 'dashed')
+        plt.title('Радиальная жесткость')
+        plt.ylabel('Перемещение')
+        plt.xlabel('Нагрузка')
+        plt.grid(True)
+        plt.show()
+    def get_ekvator_node(self):
+        p = post_open(self.post_file3d)
+        nodes = dict()
+        p.moveto(0 + 1)
+        for i in range(0, p.nodes()):
+            dx, dy, dz = p.node_displacement(i)
+            nodes[i] = float(p.node(i).y + dy)
+        ekvator_y = min(nodes.values())
+        print(ekvator_y)
+        for key,item in nodes.items():
+            if item == ekvator_y:
+                return key
+    def get_node_0(self):
+        p = post_open(self.post_file3d)
+        p.moveto(0 + 1)
+        for i in range(0, p.nodes()):
+            if p.node(i).y == 0 and p.node(i).x == 0 and p.node(i).z == 0:
+                return i
+    def get_scalar_id(self,scalar):
+        p = post_open(self.post_file3d)
+        p.moveto(0 + 1)
+        for i in range(0,p.node_scalars()):
+            if p.node_scalar_label(i) == scalar:
+                return i
+
 if __name__ =='__main__':
     GUI().run()
 
