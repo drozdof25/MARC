@@ -11,6 +11,7 @@ import xlwt
 import numpy as np
 import matplotlib.pyplot as plt
 import win32com.client
+from sklearn.linear_model import LinearRegression
 
 class GUI(Tk):
     def run(self):
@@ -501,6 +502,14 @@ class GUI(Tk):
             y_ax.append(load)
             x_ax.append(dy)
         self.radial_hardness_data = [y_ax ,x_ax]
+        x_0 = x_ax[0]
+        for i in range(0,len(x_ax)):
+            x_ax[i] -= x_0
+        x = np.array(x_ax).reshape((-1 , 1))
+        y = np.array(y_ax)
+        model = LinearRegression().fit(x, y)
+        self.intercept = model.intercept_
+        self.coef = model.coef_[0]
         plt.plot(y_ax,x_ax,marker = 'o',linestyle = 'dashed')
         plt.title('Радиальная жесткость')
         plt.ylabel('Перемещение')
@@ -547,6 +556,15 @@ class GUI(Tk):
                 sheet.Cells(c, r).value = value
                 c += 1
             r += 1
+        len_data = len(self.radial_hardness_data[0])
+        sheet.Cells(23,4).AutoFill(sheet.Range(sheet.Cells(23, 4), sheet.Cells(23 +len_data-1, 4)))
+        print(sheet.Cells(23,4))
+        sheet.Cells(50, 9).value = self.intercept
+        sheet.Cells(50, 8).value = self.coef
+        sheet.ChartObjects(1).Activate()
+        chart = wb.ActiveChart
+        chart.SeriesCollection(1).XValues = "='Энергия и работа'!$D$23:$D${0}".format(23+len_data)
+        chart.SeriesCollection(1).Values = "='Энергия и работа'!$B$23:$B${0}".format(23+len_data)
         file_name = file_name.replace('/', '\\')
         wb.SaveAs(file_name)
         wb.Close()
