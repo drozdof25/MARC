@@ -10,6 +10,8 @@ from collections import OrderedDict,Counter
 import xlwt
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.ticker import MaxNLocator
+from matplotlib.colors import BoundaryNorm
 import win32com.client
 from sklearn.linear_model import LinearRegression
 
@@ -183,7 +185,7 @@ class GUI(Tk):
         e_btn2.grid(column=9, row=4)
 
         self.frame4 = LabelFrame(self, text='Жесткости',width = 1700)
-        self.frame4.pack()
+        self.frame4.pack(side ='left')
         frame5 = LabelFrame(self.frame4,text = 'Радиальная жесткость')
         frame5.pack()
         g_lbl = Label(frame5,text = 'Диапозон инкрементов: ')
@@ -196,6 +198,10 @@ class GUI(Tk):
         g_btn.grid(column=3, row=0)
         g_btn = Button(frame5, text='сохранить данные', command=lambda: self.save_radial_hardness())
         g_btn.grid(column=4, row=0)
+        self.frame5 = LabelFrame(self,text = 'Анализ пятна контакта')
+        self.frame5.pack()
+        p_btn = Button(self.frame5, text='text',command = lambda : self.get_contact_data())
+        p_btn.grid(column = 0,row = 0)
     def open_file(self,problem):
         op = askopenfilename(filetypes = (("Binary Post File","*.t16"),("all files","*.*")))
         if problem == '2d':
@@ -425,63 +431,6 @@ class GUI(Tk):
                     sheet.Cells(c,r).value = energy
                 r += 1
             c+=1
-        # wb = xlwt.Workbook()
-        # ws = wb.add_sheet('Энергия и работа',cell_overwrite_ok=True)
-        # titles = ['Задача','Инкремент','Полная энергия деформации, Дж','Полная работа, Дж','Полная энергия упругой деформации, Дж',
-        #           'Полная работа приложеных сил/перемещений, Дж','Полная работа контактных  сил, Дж',
-        #           'Полная работа сил трения  в контакте, Дж','Объём, мм^3','Масса, кг','Радиус шины, мм','Динамический радиус, мм',
-        #           'Нагрузка Q, кг','Прогиб, мм','Антипрогиб, мм','Радиус качения, мм','Деформация сжатия протектора в окружном направлении %',
-        #           'Линейная скорость качения шины, км/ч','Угловая скорость качения шины, рад/с','Fzroad,Н','КСК']
-        # # Устанавливаем перенос по словам, выравнивание
-        # alignment = xlwt.Alignment()
-        # alignment.wrap = 1
-        # alignment.horz = xlwt.Alignment.HORZ_CENTER  # May be: HORZ_GENERAL, HORZ_LEFT, HORZ_CENTER, HORZ_RIGHT, HORZ_FILLED, HORZ_JUSTIFIED, HORZ_CENTER_ACROSS_SEL, HORZ_DISTRIBUTED
-        # alignment.vert = xlwt.Alignment.VERT_CENTER  # May be: VERT_TOP, VERT_CENTER, VERT_BOTTOM, VERT_JUSTIFIED, VERT_DISTRIBUTED
-        # # Устанавливаем шрифт
-        # font = xlwt.Font()
-        # font.name = 'Arial Cyr'
-        # font.bold = True
-        # #Фон
-        # patern = xlwt.Pattern()
-        # patern.pattern = xlwt.Pattern.SOLID_PATTERN
-        # patern.pattern_fore_colour = xlwt.Style.colour_map['yellow']
-        #
-        # # Устанавливаем границы
-        # borders = xlwt.Borders()
-        # borders.left = xlwt.Borders.THIN  # May be: NO_LINE, THIN, MEDIUM, DASHED, DOTTED, THICK, DOUBLE, HAIR, MEDIUM_DASHED, THIN_DASH_DOTTED, MEDIUM_DASH_DOTTED, THIN_DASH_DOT_DOTTED, MEDIUM_DASH_DOT_DOTTED, SLANTED_MEDIUM_DASH_DOTTED, or 0x00 through 0x0D.
-        # borders.right = xlwt.Borders.THIN
-        # borders.top = xlwt.Borders.THIN
-        # borders.bottom = xlwt.Borders.THIN
-        # style_titles = xlwt.XFStyle()
-        # style_titles.font = font
-        # style_titles.alignment = alignment
-        # style_titles.borders = borders
-        # style_data = xlwt.XFStyle()
-        # style_data.borders = borders
-        # style_data2 = xlwt.XFStyle()
-        # style_data2.pattern = patern
-        # style_data2.borders = borders
-        # style_data2.font = font
-        # style_data2.alignment =alignment
-        #
-        # for i in range(1,len(titles)+1):
-        #     ws.write_merge(1, 8, i, i,titles[i - 1],style_titles)
-        #     #ws.write(1, i, titles[i - 1], style)
-        # c = 9
-        # for problem in self.energy:
-        #     r = 1
-        #     for energy in problem:
-        #         if r == 11:
-        #             ws.write_merge(9,11,r,r,energy,style_data2)
-        #         elif r==14:
-        #             ws.write(c,r,energy,style_data2)
-        #         elif r == 21:
-        #             ws.write(c, r, energy, style_data2)
-        #         else:
-        #             ws.write(c, r, energy, style_data)
-        #         r += 1
-        #     c += 1
-        # wb.save(file_name)
         file_name = file_name.replace('/', '\\')
         wb.SaveAs(file_name)
         wb.Close()
@@ -525,7 +474,6 @@ class GUI(Tk):
             dx, dy, dz = p.node_displacement(i)
             nodes[i] = float(p.node(i).y + dy)
         ekvator_y = min(nodes.values())
-        print(ekvator_y)
         for key,item in nodes.items():
             if item == ekvator_y:
                 return key
@@ -563,12 +511,78 @@ class GUI(Tk):
         sheet.Cells(50, 8).value = self.coef
         sheet.ChartObjects(1).Activate()
         chart = wb.ActiveChart
-        chart.SeriesCollection(1).XValues = "='Энергия и работа'!$D$23:$D${0}".format(23+len_data)
-        chart.SeriesCollection(1).Values = "='Энергия и работа'!$B$23:$B${0}".format(23+len_data)
+        try:
+            chart.SeriesCollection(1).XValues = "='Энергия и работа'!$D$23:$D$43"
+            chart.SeriesCollection(1).Values = "='Энергия и работа'!$B$23:$B$43"
+        except:
+            print('неудалось изменить диапозон диаграммы')
         file_name = file_name.replace('/', '\\')
         wb.SaveAs(file_name)
         wb.Close()
         Excel.Quit()
+    def get_contact_data(self):
+        check = [0]
+        check[0] = 1
+        print(check)
+        p = post_open(self.post_file3d)
+        ekvator_node = self.get_ekvator_node()
+        p.moveto(11)
+        dx, dy, dz = p.node_displacement(ekvator_node)
+        y_ekvator = p.node(ekvator_node).y + dy
+        x_ekvator = p.node(ekvator_node).x + dx
+        z_ekvator = p.node(ekvator_node).z + dz
+        print(x_ekvator ,y_ekvator ,z_ekvator )
+        node_list =[]
+        for i in range(0,p.nodes()):
+            dx, dy, dz = p.node_displacement(i)
+            y_node = p.node(i).y + dy
+            if y_node <  y_ekvator +10:
+                node_list.append(i)
+        node_contact = []
+        print(node_contact)
+        for node in node_list:
+            dx, dy, dz = p.node_displacement(node)
+            if p.node_vector(node,3).y >0:
+                x = p.node(node).x + dx
+                y = p.node(node).z + dz
+                node_contact.append([node,[x,y],p.node_vector(node,3).y])
+        x = [x_ekvator]
+        y = [z_ekvator]
+        node_contact.sort(key=lambda x: x[1][0])
+        delta = 1
+        for node in node_contact:
+            if node[1][0] not in x:
+                if self.check_delta(node[1][0],x,delta)[0]:
+                    x.append(node[1][0])
+        x=sorted(x)
+        print(x)
+        for node in node_contact:
+            if node[1][1] not in y:
+                if self.check_delta(node[1][1],y,delta)[0]:
+                    y.append(node[1][1])
+        y = sorted(y)
+        print(y)
+        z = np.zeros((len(y), len(x)))
+        X, Y = np.meshgrid(np.array(x), np.array(y))
+        for node in node_contact:
+            if self.check_delta(node[1][0], x, delta)[0] == False and self.check_delta(node[1][1], y, delta)[0] == False:
+                z[self.check_delta(node[1][1], y, delta)[1]][self.check_delta(node[1][0], x, delta)[1]] = node[2]
+        levels = MaxNLocator(nbins=10).tick_values(np.min(z), np.max(z))
+        fig, ax = plt.subplots()
+        ax.axis('equal')
+        cf = ax.contourf(X, Y, z, levels=levels)
+        fig.colorbar(cf, ax=ax)
+        fig.tight_layout()
+        plt.show()
+
+    def check_delta(self,x,x_list,delta):
+        for i in x_list:
+            minimum = i - delta
+            maximum = i + delta
+            if x > minimum and x < maximum:
+                return [False,x_list.index(i)]
+        return [True,None]
+
 if __name__ =='__main__':
     GUI().run()
 
