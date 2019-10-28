@@ -9,11 +9,13 @@ from tkinter.ttk import Combobox
 from collections import OrderedDict,Counter
 import xlwt
 import numpy as np
+import math
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 from matplotlib.colors import BoundaryNorm,ListedColormap
 import win32com.client
 from sklearn.linear_model import LinearRegression
+from matplotlib.gridspec import GridSpec
 
 class GUI(Tk):
     def run(self):
@@ -200,8 +202,12 @@ class GUI(Tk):
         g_btn.grid(column=4, row=0)
         self.frame5 = LabelFrame(self,text = 'Анализ пятна контакта')
         self.frame5.pack()
-        p_btn = Button(self.frame5, text='text',command = lambda : self.get_contact_data())
-        p_btn.grid(column = 0,row = 0)
+        p_lbl = Label(self.frame5,text = 'инкремент')
+        p_lbl.grid(column=0, row=0)
+        self.p_combo = Combobox(self.frame5)
+        self.p_combo.grid(column=1, row=0)
+        p_btn = Button(self.frame5, text='get',command = lambda : self.get_contact_data())
+        p_btn.grid(column = 2,row = 0)
     def open_file(self,problem):
         op = askopenfilename(filetypes = (("Binary Post File","*.t16"),("all files","*.*")))
         if problem == '2d':
@@ -242,6 +248,7 @@ class GUI(Tk):
             self.e_combo3['values'] = incs
             self.g_combo1['values'] = incs
             self.g_combo2['values'] = incs
+            self.p_combo['values'] = incs
             p.moveto(0)
             self.elements_3d = p.elements()
 
@@ -334,6 +341,7 @@ class GUI(Tk):
         inc_combos = [self.e_combo1,self.e_combo2,self.e_combo3]
         self.energy = []
         p = post_open(self.post_file3d)
+
         p.moveto(0 + 1)
         node_y = []
         for i in range(0, p.nodes()):
@@ -523,7 +531,8 @@ class GUI(Tk):
     def get_contact_data(self):
         p = post_open(self.post_file3d)
         ekvator_node = self.get_ekvator_node()
-        p.moveto(11)
+        inc = int(self.p_combo.get()) + 1
+        p.moveto(inc)
         dx, dy, dz = p.node_displacement(ekvator_node)
         y_ekvator = p.node(ekvator_node).y + dy
         x_ekvator = p.node(ekvator_node).x + dx
@@ -549,8 +558,18 @@ class GUI(Tk):
         x = [x_ekvator]
         y = [z_ekvator]
         node_contact.sort(key=lambda x: x[1][0])
-        delta_x = 2
-        delta_y = 3
+        len_vectors = {}
+        for node in node_contact:
+            if round(node[1][1])>0:
+                len_vectors[node[0]] = math.sqrt((z_ekvator-node[1][1])**2+(x_ekvator-node[1][0])**2)
+        min_len = min(len_vectors.items(),key=lambda x: x[1])
+        delta_y = min_len[1]/4
+        len_vectors = {}
+        for node in node_contact:
+            if round(node[1][0]) > 0:
+                len_vectors[node[0]] = math.sqrt((z_ekvator - node[1][1]) ** 2 + (x_ekvator - node[1][0]) ** 2)
+        min_len = min(len_vectors.items(), key=lambda x: x[1])
+        delta_x = min_len[1] / 4
         for node in node_contact:
             if node[1][0] not in x:
                 if self.check_delta(node[1][0],x,delta_x )[0]:
@@ -567,8 +586,15 @@ class GUI(Tk):
             if self.check_delta(node[1][0], x, delta_x )[0] == False and self.check_delta(node[1][1], y, delta_y)[0] == False:
                 z[self.check_delta(node[1][1], y, delta_y)[1]][self.check_delta(node[1][0], x, delta_x )[1]] = node[2]
         levels = MaxNLocator(nbins=10).tick_values(np.min(z), np.max(z))
-        fig, ax = plt.subplots()
-        ax.axis('equal')
+
+        #fig, (ax1,ax2,ax3) = plt.subplots(nrows=3,figsize= (10,10))
+        fig = plt.figure(figsize= (10,10))
+        gs = GridSpec(2, 2, figure=fig)
+        ax1 = fig.add_subplot(gs[0,:])
+        ax2 = fig.add_subplot(gs[1,0])
+        ax3 = fig.add_subplot(gs[1,1])
+        ax1.axis('equal')
+        ax1.set_title('Контактное пятно')
         cmap_arr = np.array([[82 / 256, 0 / 256, 82 / 256, 1],
                              [33 / 256, 0 / 256, 186 / 256, 1],
                              [0 / 256, 43 / 256, 212 / 256, 1],
@@ -579,13 +605,28 @@ class GUI(Tk):
                              [255 / 256, 127 / 256, 0 / 256, 1],
                              [255 / 256, 64 / 256, 0 / 256, 1],
                              [255 / 256, 0 / 256, 0 / 256, 1]])
+
         newcmp = ListedColormap(cmap_arr)
-        cf = ax.contourf(X, Y, z, levels=levels,cmap = newcmp)
-        fig.colorbar(cf, ax=ax)
+        contact = ax1.contourf(X, Y, z, levels=levels,cmap = newcmp)
+        fig.colorbar(contact, ax=ax1)
         fig.tight_layout()
+        y_cpd_1 = []
+        x_cpd_1 = []
+        for node in node_contact:
+            if round(node[1][1]) == 0 and round(node[1][0])>0:
+                y_cpd_1.append(node[2])
+                x_cpd_1.append(node[1][0])
+        y_cpd_2 = []
+        x_cpd_2 = []
+        for node in node_contact:
+            if round(node[1][0]) == 0 and round(node[1][1]) > 0:
+                y_cpd_2.append(node[2])
+                x_cpd_2.append(node[1][1])
+        cont_press_dist1 = ax2.plot(x_cpd_1, y_cpd_1, marker='o', linestyle='dashed')
+        cont_press_dist2 = ax3.plot(x_cpd_2,y_cpd_2,marker = 'o',linestyle = 'dashed')
+        ax2.grid(True)
+        ax3.grid(True)
         plt.show()
-
-
 
     def check_delta(self,x,x_list,delta):
         for i in x_list:
