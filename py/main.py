@@ -665,8 +665,16 @@ class GUI(Tk):
                 check_list.append(True)
             if len(check_list) == 1000:
                 break
-        X, Y = np.meshgrid(np.array(x), np.array(y))
-        return X,Y,z,node_contact
+        y_bord = max(y)+max(y)*0.05
+        x_bord = max(x)+max(x)*0.05
+        y2 = [-y_bord] + y + [y_bord]
+        x2 = [-x_bord] + x + [x_bord]
+        Z = np.zeros((len(y2), len(x2)))
+        for n in range(0, len(y)):
+            for i in range(0, len(x)):
+                Z[n+1][i+1] = z[n][i]
+        X, Y = np.meshgrid(np.array(x2), np.array(y2))
+        return X,Y,Z,node_contact
 if __name__ =='__main__':
     GUI().run()
 
