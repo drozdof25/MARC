@@ -17,6 +17,7 @@ import win32com.client
 from sklearn.linear_model import LinearRegression
 from matplotlib.gridspec import GridSpec
 
+
 class GUI(Tk):
     def run(self):
         self.build_main_widgets()
@@ -31,7 +32,6 @@ class GUI(Tk):
         lbl2 = Label(frame1, text='Файл решения 3D:')
         self.lbl3 = Label(frame1)
         self.lbl4 = Label(frame1)
-
         btn.grid(column=0,row =0)
         btn2.grid(column=0, row=1)
         lbl.grid(column=1, row=0)
@@ -208,6 +208,10 @@ class GUI(Tk):
         self.p_combo.grid(column=1, row=0)
         p_btn = Button(self.frame5, text='get',command = lambda : self.get_contact_data())
         p_btn.grid(column = 2,row = 0)
+        p_btn = Button(self.frame5, text='save', command=lambda: self.save_contact_data())
+        p_btn.grid(column=3, row=0)
+        p_btn = Button(self.frame5, text='test', command=lambda: self.contact_numpy())
+        p_btn.grid(column=4, row=0)
     def open_file(self,problem):
         op = askopenfilename(filetypes = (("Binary Post File","*.t16"),("all files","*.*")))
         if problem == '2d':
@@ -557,19 +561,19 @@ class GUI(Tk):
                 node_contact.append([node,[x,y],p.node_vector(node,vector_id).y])
         x = [x_ekvator]
         y = [z_ekvator]
-        node_contact.sort(key=lambda x: x[1][0])
+
         len_vectors = {}
         for node in node_contact:
             if round(node[1][1])>0:
                 len_vectors[node[0]] = math.sqrt((z_ekvator-node[1][1])**2+(x_ekvator-node[1][0])**2)
         min_len = min(len_vectors.items(),key=lambda x: x[1])
-        delta_y = min_len[1]/4
+        delta_y = min_len[1]/3
         len_vectors = {}
         for node in node_contact:
             if round(node[1][0]) > 0:
                 len_vectors[node[0]] = math.sqrt((z_ekvator - node[1][1]) ** 2 + (x_ekvator - node[1][0]) ** 2)
         min_len = min(len_vectors.items(), key=lambda x: x[1])
-        delta_x = min_len[1] / 4
+        delta_x = min_len[1] / 1.5
         for node in node_contact:
             if node[1][0] not in x:
                 if self.check_delta(node[1][0],x,delta_x )[0]:
@@ -581,6 +585,7 @@ class GUI(Tk):
                     y.append(node[1][1])
         y = sorted(y)
         z = np.zeros((len(y), len(x)))
+        print(x)
         X, Y = np.meshgrid(np.array(x), np.array(y))
         for node in node_contact:
             if self.check_delta(node[1][0], x, delta_x )[0] == False and self.check_delta(node[1][1], y, delta_y)[0] == False:
@@ -612,12 +617,14 @@ class GUI(Tk):
         fig.tight_layout()
         y_cpd_1 = []
         x_cpd_1 = []
+        node_contact.sort(key=lambda x: x[1][0])
         for node in node_contact:
             if round(node[1][1]) == 0 and round(node[1][0])>0:
                 y_cpd_1.append(node[2])
                 x_cpd_1.append(node[1][0])
         y_cpd_2 = []
         x_cpd_2 = []
+        node_contact.sort(key=lambda x: x[1][1])
         for node in node_contact:
             if round(node[1][0]) == 0 and round(node[1][1]) > 0:
                 y_cpd_2.append(node[2])
@@ -626,16 +633,117 @@ class GUI(Tk):
         cont_press_dist2 = ax3.plot(x_cpd_2,y_cpd_2,marker = 'o',linestyle = 'dashed')
         ax2.grid(True)
         ax3.grid(True)
-        plt.show()
+        fig.savefig("fig2.png")
 
+        print(len(node_contact),len(np.where(z > 0)[0]))
+        plt.show()
     def check_delta(self,x,x_list,delta):
         for i in x_list:
             minimum = i - delta
             maximum = i + delta
             if x > minimum and x < maximum:
                 return [False,x_list.index(i)]
-        return [True,None]
+        return [True, None]
+    def save_contact_data(self):
+        file_name = asksaveasfilename(defaultextension='.xls',
+                                      filetypes=(("Excel book", "*.xls"), ("all files", "*.*")))
+        print(file_name)
+        Excel = win32com.client.Dispatch("Excel.Application")
+        wb = Excel.Workbooks.Open(u'D:\\Projects\\MARC+Python\\MARC\\py\\shablon.xls')
+        sheet = wb.ActiveSheet
+        cell = sheet.Cells(22, 18)
+        pic = sheet.Pictures().Insert(r"D:\Figure_1.jpg")
+        pic.Left = cell.Left + 20
+        pic.Top = cell.Top + 30
+        file_name = file_name.replace('/', '\\')
+        wb.SaveAs(file_name)
+        wb.Close()
+        Excel.Quit()
+    def contact_numpy(self):
+        p = post_open(self.post_file3d)
+        ekvator_node = self.get_ekvator_node()
+        inc = int(self.p_combo.get()) + 1
+        p.moveto(inc)
+        dx, dy, dz = p.node_displacement(ekvator_node)
+        y_ekvator = p.node(ekvator_node).y + dy
+        x_ekvator = p.node(ekvator_node).x + dx
+        z_ekvator = p.node(ekvator_node).z + dz
+        node_list = []
+        for i in range(0, p.nodes()):
+            dx, dy, dz = p.node_displacement(i)
+            y_node = p.node(i).y + dy
+            if y_node < y_ekvator + 10:
+                node_list.append(i)
+        node_contact = []
+        vectors = p.node_vectors()
+        vector_id = None
+        for i in range(0, vectors):
+            if p.node_vector_label(i) == 'Contact Normal Stress':
+                vector_id = i
+        for node in node_list:
+            dx, dy, dz = p.node_displacement(node)
+            if p.node_vector(node, vector_id).y > 0:
+                x = p.node(node).x + dx
+                y = p.node(node).z + dz
+                node_contact.append([node, [x, y], p.node_vector(node, vector_id).y])
+        node_contact.sort(key=lambda x: x[1][0])
 
+
+        x = []
+        y = []
+        for node in node_contact:
+            if round(node[1][1] - z_ekvator) == 0:
+                x.append(node[1][0])
+            if round(node[1][0] - x_ekvator) == 0:
+                y.append(node[1][1])
+        x.sort()
+        y.sort()
+        print(x)
+        print(y)
+
+        z = np.zeros((len(y), len(x)))
+        check = len(np.where(z > 0)[0])
+        delta_x = 0.1
+        delta_y = 0.1
+        check_list = []
+        while(check<len(node_contact)):
+            check_start = check
+            for n in range(0,len(y)):
+                for i in range(0,len(x)):
+                    #print(x[i],y[n])
+                    for node in node_contact:
+                        if abs(node[1][0] - x[i]) < delta_x and abs(node[1][1] - y[n]) < delta_y:
+                            z[n][i] = node[2]
+            check = len(np.where(z > 0)[0])
+            print(check)
+            print(check/len(node_contact))
+            if check > check_start:
+                delta_x += 0.01
+                check_list = []
+            elif check == check_start:
+                delta_x += 0.01
+                check_list.append(True)
+            if len(check_list) == 100:
+                break
+        X, Y = np.meshgrid(np.array(x), np.array(y))
+        levels = MaxNLocator(nbins=10).tick_values(np.min(z), np.max(z))
+        fig, ax = plt.subplots(figsize=(10, 10))
+        ax.axis('equal')
+        ax.set_title('Контактное пятно')
+        cmap_arr = np.array([[82 / 256, 0 / 256, 82 / 256, 1],
+                             [33 / 256, 0 / 256, 186 / 256, 1],
+                             [0 / 256, 43 / 256, 212 / 256, 1],
+                             [0 / 256, 212 / 256, 42 / 256, 1],
+                             [85 / 256, 255 / 256, 0 / 256, 1],
+                             [212 / 256, 255 / 256, 0 / 256, 1],
+                             [255 / 256, 212 / 256, 0 / 256, 1],
+                             [255 / 256, 127 / 256, 0 / 256, 1],
+                             [255 / 256, 64 / 256, 0 / 256, 1],
+                             [255 / 256, 0 / 256, 0 / 256, 1]])
+
+        newcmp = ListedColormap(cmap_arr)
+        contact = ax.contourf(X, Y, z, levels=levels, cmap=newcmp)
+        plt.show()
 if __name__ =='__main__':
     GUI().run()
 
