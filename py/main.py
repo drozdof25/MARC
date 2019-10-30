@@ -689,24 +689,22 @@ class GUI(Tk):
         node_contact.sort(key=lambda x: x[1][0])
 
 
-        x = []
-        y = []
-        for node in node_contact:
-            if round(node[1][1] - z_ekvator) == 0:
-                x.append(node[1][0])
-            if round(node[1][0] - x_ekvator) == 0:
-                y.append(node[1][1])
-        x.sort()
-        y.sort()
-        print(x)
-        print(y)
 
-        z = np.zeros((len(y), len(x)))
-        check = len(np.where(z > 0)[0])
+        check = 0
         delta_x = 0.1
         delta_y = 0.1
         check_list = []
         while(check<len(node_contact)):
+            x = []
+            y = []
+            for node in node_contact:
+                if abs(node[1][1] - z_ekvator) < delta_x:
+                    x.append(node[1][0])
+                if abs(node[1][0] - x_ekvator) < delta_y:
+                    y.append(node[1][1])
+            x.sort()
+            y.sort()
+            z = np.zeros((len(y), len(x)))
             check_start = check
             for n in range(0,len(y)):
                 for i in range(0,len(x)):
@@ -715,15 +713,15 @@ class GUI(Tk):
                         if abs(node[1][0] - x[i]) < delta_x and abs(node[1][1] - y[n]) < delta_y:
                             z[n][i] = node[2]
             check = len(np.where(z > 0)[0])
-            print(check)
-            print(check/len(node_contact))
+            print(check, check/len(node_contact) ,delta_x,delta_y)
             if check > check_start:
-                delta_x += 0.01
+                delta_y += 0.01
                 check_list = []
             elif check == check_start:
                 delta_x += 0.01
+                delta_y += 0.01
                 check_list.append(True)
-            if len(check_list) == 100:
+            if len(check_list) == 1000:
                 break
         X, Y = np.meshgrid(np.array(x), np.array(y))
         levels = MaxNLocator(nbins=10).tick_values(np.min(z), np.max(z))
