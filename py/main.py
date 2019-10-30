@@ -533,65 +533,8 @@ class GUI(Tk):
         wb.Close()
         Excel.Quit()
     def get_contact_data(self):
-        p = post_open(self.post_file3d)
-        ekvator_node = self.get_ekvator_node()
-        inc = int(self.p_combo.get()) + 1
-        p.moveto(inc)
-        dx, dy, dz = p.node_displacement(ekvator_node)
-        y_ekvator = p.node(ekvator_node).y + dy
-        x_ekvator = p.node(ekvator_node).x + dx
-        z_ekvator = p.node(ekvator_node).z + dz
-        node_list =[]
-        for i in range(0,p.nodes()):
-            dx, dy, dz = p.node_displacement(i)
-            y_node = p.node(i).y + dy
-            if y_node <  y_ekvator +10:
-                node_list.append(i)
-        node_contact = []
-        vectors = p.node_vectors()
-        vector_id = None
-        for i in range(0,vectors):
-             if p.node_vector_label(i) == 'Contact Normal Stress':
-                 vector_id = i
-        for node in node_list:
-            dx, dy, dz = p.node_displacement(node)
-            if p.node_vector(node,vector_id).y >0:
-                x = p.node(node).x + dx
-                y = p.node(node).z + dz
-                node_contact.append([node,[x,y],p.node_vector(node,vector_id).y])
-        x = [x_ekvator]
-        y = [z_ekvator]
-
-        len_vectors = {}
-        for node in node_contact:
-            if round(node[1][1])>0:
-                len_vectors[node[0]] = math.sqrt((z_ekvator-node[1][1])**2+(x_ekvator-node[1][0])**2)
-        min_len = min(len_vectors.items(),key=lambda x: x[1])
-        delta_y = min_len[1]/3
-        len_vectors = {}
-        for node in node_contact:
-            if round(node[1][0]) > 0:
-                len_vectors[node[0]] = math.sqrt((z_ekvator - node[1][1]) ** 2 + (x_ekvator - node[1][0]) ** 2)
-        min_len = min(len_vectors.items(), key=lambda x: x[1])
-        delta_x = min_len[1] / 1.5
-        for node in node_contact:
-            if node[1][0] not in x:
-                if self.check_delta(node[1][0],x,delta_x )[0]:
-                    x.append(node[1][0])
-        x=sorted(x)
-        for node in node_contact:
-            if node[1][1] not in y:
-                if self.check_delta(node[1][1],y,delta_y)[0]:
-                    y.append(node[1][1])
-        y = sorted(y)
-        z = np.zeros((len(y), len(x)))
-        print(x)
-        X, Y = np.meshgrid(np.array(x), np.array(y))
-        for node in node_contact:
-            if self.check_delta(node[1][0], x, delta_x )[0] == False and self.check_delta(node[1][1], y, delta_y)[0] == False:
-                z[self.check_delta(node[1][1], y, delta_y)[1]][self.check_delta(node[1][0], x, delta_x )[1]] = node[2]
+        X,Y,z,node_contact = self.contact_xyz()
         levels = MaxNLocator(nbins=10).tick_values(np.min(z), np.max(z))
-
         #fig, (ax1,ax2,ax3) = plt.subplots(nrows=3,figsize= (10,10))
         fig = plt.figure(figsize= (10,10))
         gs = GridSpec(2, 2, figure=fig)
@@ -610,7 +553,6 @@ class GUI(Tk):
                              [255 / 256, 127 / 256, 0 / 256, 1],
                              [255 / 256, 64 / 256, 0 / 256, 1],
                              [255 / 256, 0 / 256, 0 / 256, 1]])
-
         newcmp = ListedColormap(cmap_arr)
         contact = ax1.contourf(X, Y, z, levels=levels,cmap = newcmp)
         fig.colorbar(contact, ax=ax1)
@@ -659,7 +601,7 @@ class GUI(Tk):
         wb.SaveAs(file_name)
         wb.Close()
         Excel.Quit()
-    def contact_numpy(self):
+    def contact_xyz(self):
         p = post_open(self.post_file3d)
         ekvator_node = self.get_ekvator_node()
         inc = int(self.p_combo.get()) + 1
@@ -687,13 +629,13 @@ class GUI(Tk):
                 y = p.node(node).z + dz
                 node_contact.append([node, [x, y], p.node_vector(node, vector_id).y])
         node_contact.sort(key=lambda x: x[1][0])
-
-
-
         check = 0
         delta_x = 0.1
         delta_y = 0.1
         check_list = []
+        x =[]
+        y =[]
+        z =[]
         while(check<len(node_contact)):
             x = []
             y = []
@@ -724,24 +666,7 @@ class GUI(Tk):
             if len(check_list) == 1000:
                 break
         X, Y = np.meshgrid(np.array(x), np.array(y))
-        levels = MaxNLocator(nbins=10).tick_values(np.min(z), np.max(z))
-        fig, ax = plt.subplots(figsize=(10, 10))
-        ax.axis('equal')
-        ax.set_title('Контактное пятно')
-        cmap_arr = np.array([[82 / 256, 0 / 256, 82 / 256, 1],
-                             [33 / 256, 0 / 256, 186 / 256, 1],
-                             [0 / 256, 43 / 256, 212 / 256, 1],
-                             [0 / 256, 212 / 256, 42 / 256, 1],
-                             [85 / 256, 255 / 256, 0 / 256, 1],
-                             [212 / 256, 255 / 256, 0 / 256, 1],
-                             [255 / 256, 212 / 256, 0 / 256, 1],
-                             [255 / 256, 127 / 256, 0 / 256, 1],
-                             [255 / 256, 64 / 256, 0 / 256, 1],
-                             [255 / 256, 0 / 256, 0 / 256, 1]])
-
-        newcmp = ListedColormap(cmap_arr)
-        contact = ax.contourf(X, Y, z, levels=levels, cmap=newcmp)
-        plt.show()
+        return X,Y,z,node_contact
 if __name__ =='__main__':
     GUI().run()
 
