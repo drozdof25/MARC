@@ -210,7 +210,7 @@ class GUI(Tk):
         p_btn.grid(column = 2,row = 0)
         p_btn = Button(self.frame5, text='save', command=lambda: self.save_contact_data())
         p_btn.grid(column=3, row=0)
-        p_btn = Button(self.frame5, text='test', command=lambda: self.contact_numpy())
+        p_btn = Button(self.frame5, text='test', command=lambda: self.contact_area())
         p_btn.grid(column=4, row=0)
     def open_file(self,problem):
         op = askopenfilename(filetypes = (("Binary Post File","*.t16"),("all files","*.*")))
@@ -533,7 +533,8 @@ class GUI(Tk):
         wb.Close()
         Excel.Quit()
     def get_contact_data(self):
-        X,Y,z,node_contact = self.contact_xyz()
+        x,y,z,node_contact = self.contact_xyz()
+        X,Y = np.meshgrid(np.array(x), np.array(y))
         levels = MaxNLocator(nbins=10).tick_values(np.min(z), np.max(z))
         #fig, (ax1,ax2,ax3) = plt.subplots(nrows=3,figsize= (10,10))
         fig = plt.figure(figsize= (10,10))
@@ -681,8 +682,25 @@ class GUI(Tk):
         for n in range(0, len(y)):
             for i in range(0, len(x)):
                 Z[n+1][i+1] = z[n][i]
-        X, Y = np.meshgrid(np.array(x2), np.array(y2))
-        return X,Y,Z,node_contact
+
+        return x2,y2,Z,node_contact
+    def contact_area(self):
+        x,y,z,node_contact = self.contact_xyz()
+        y_value = []
+        for i in range(0,len(x)):
+            y_max = [y[n] for n in range(0,len(y)) if z[n][i]> 0]
+            if len(y_max)>0:
+                y_max = max(y_max)
+            else:
+                y_max = 0
+            y_value.append(y_max)
+        print(len(y))
+        print(len(x))
+        print(len(y_value))
+        print(z[0])
+        print(z[0][0])
+        area = np.trapz(y_value,x=x)*2
+        print(area)
 if __name__ =='__main__':
     GUI().run()
 
