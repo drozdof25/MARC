@@ -558,19 +558,27 @@ class GUI(Tk):
         fig.colorbar(contact, ax=ax1)
         fig.tight_layout()
         y_cpd_1 = []
-        x_cpd_1 = []
+        x_cpd_1 = [0]
         node_contact.sort(key=lambda x: x[1][0])
         for node in node_contact:
             if round(node[1][1]) == 0 and round(node[1][0])>0:
                 y_cpd_1.append(node[2])
                 x_cpd_1.append(node[1][0])
+        for node in node_contact:
+            if round(node[1][1]) == 0 and round(node[1][0]) == 0:
+                y_cpd_1 = [node[2]]+y_cpd_1
+                break
         y_cpd_2 = []
-        x_cpd_2 = []
+        x_cpd_2 = [0]
         node_contact.sort(key=lambda x: x[1][1])
         for node in node_contact:
             if round(node[1][0]) == 0 and round(node[1][1]) > 0:
                 y_cpd_2.append(node[2])
                 x_cpd_2.append(node[1][1])
+        for node in node_contact:
+            if round(node[1][1]) == 0 and round(node[1][0]) == 0:
+                y_cpd_2 = [node[2]]+y_cpd_2
+                break
         cont_press_dist1 = ax2.plot(x_cpd_1, y_cpd_1, marker='o', linestyle='dashed')
         cont_press_dist2 = ax3.plot(x_cpd_2,y_cpd_2,marker = 'o',linestyle = 'dashed')
         ax2.grid(True)
@@ -660,8 +668,8 @@ class GUI(Tk):
                 delta_y += 0.01
                 check_list = []
             elif check == check_start:
-                delta_x += 0.01
-                delta_y += 0.01
+                delta_x += 0.1
+                delta_y += 0.1
                 check_list.append(True)
             if len(check_list) == 1000:
                 break
